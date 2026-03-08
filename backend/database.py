@@ -1,30 +1,62 @@
 import os
+import csv
+from pathlib import Path
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+# Local fallback for stock search when Supabase is not configured.
+STOCKS_CSV_PATH = Path(__file__).resolve().parent.parent / "ALL_EQUITY_FINAL.csv"
 
 
 def get_client() -> Client:
-    if not SUPABASE_URL or not SUPABASE_KEY:
+    supabase_url = os.getenv("SUPABASE_URL", "")
+    supabase_key = os.getenv("SUPABASE_KEY", "")
+
+    if not supabase_url or not supabase_key:
         raise RuntimeError(
             "SUPABASE_URL and SUPABASE_KEY environment variables must be set"
         )
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+    return create_client(supabase_url, supabase_key)
+
+
+def _load_stocks_from_csv():
+    if not STOCKS_CSV_PATH.exists():
+        return []
+
+    stocks = []
+    with STOCKS_CSV_PATH.open("r", encoding="utf-8", newline="") as csv_file:
+        reader = csv.DictReader(csv_file)
+        for row in reader:
+            symbol = (row.get("symbol") or "").strip()
+            company_name = (row.get("company_name") or "").strip()
+            if symbol and company_name:
+                stocks.append(f"{symbol} - {company_name}")
+
+    return stocks
 
 
 def get_all_stocks():
-    client = get_client()
-    res = (
-        client.table("stocks")
-        .select("symbol, company_name")
-        .order("symbol")
-        .execute()
-    )
-    return [f"{r['symbol']} - {r['company_name']}" for r in res.data]
+    try:
+        client = get_client()
+        res = (
+            client.table("stocks")
+            .select("symbol, company_name")
+            .order("symbol")
+            .execute()
+        )
+        if res.data:
+            return [f"{r['symbol']} - {r['company_name']}" for r in res.data]
+    except Exception:
+        pass
+
+    fallback = _load_stocks_from_csv()
+    if fallback:
+        return fallback
+
+    raise RuntimeError("Unable to load stocks from Supabase or local CSV")
 
 
 def get_cached_analysis(symbol):
