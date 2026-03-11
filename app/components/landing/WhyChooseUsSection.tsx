@@ -29,7 +29,7 @@ const FEATURES = [
         <circle cx="44" cy="24" r="4" fill="#39FF14" />
       </svg>
     ),
-    title: "Fast progress",
+    title: "Fast Progress",
     description:
       "Structured programs designed to fast-track your growth. Achieve your profit targets efficiently and get funded faster.",
   },

@@ -23,7 +23,7 @@ export default function LetsTalkSection() {
               height: d.size,
               left: `${d.x}%`,
               top: `${d.y}%`,
-              background: `radial-gradient(circle, ${d.tint}${Math.round(d.opacity * 255).toString(16).padStart(2, "0")} 0%, transparent 70%)`,
+              background: `radial-gradient(circle, rgba(${d.tint === "#39FF14" ? "57,255,20" : "184,247,82"},${d.opacity}) 0%, transparent 70%)`,
               backdropFilter: `blur(${d.blur}px)`,
               WebkitBackdropFilter: `blur(${d.blur}px)`,
               border: `1px solid rgba(57,255,20,0.05)`,

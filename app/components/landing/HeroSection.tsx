@@ -13,14 +13,14 @@ interface Particle {
 }
 
 const MATH_TILES = [
-  { text: "(12+12)", style: "top-[22%] left-[8%]", dark: false },
-  { text: "-15+6", style: "top-[40%] left-[6%]", dark: false },
-  { text: "3y", style: "top-[62%] left-[10%]", dark: false },
-  { text: "17+6-4", style: "top-[30%] right-[8%]", dark: false },
-  { text: "-8", style: "top-[50%] right-[6%]", dark: false },
-  { text: "5x9", style: "bottom-[18%] right-[10%]", dark: false },
-  { text: "24", style: "bottom-[12%] left-[18%]", dark: true },
-  { text: "12", style: "top-[14%] right-[16%]", dark: true },
+  { id: 1, text: "(12+12)", style: "top-[22%] left-[8%]", dark: false, delay: "0s" },
+  { id: 2, text: "-15+6", style: "top-[40%] left-[6%]", dark: false, delay: "1s" },
+  { id: 3, text: "3y", style: "top-[62%] left-[10%]", dark: false, delay: "2s" },
+  { id: 4, text: "17+6-4", style: "top-[30%] right-[8%]", dark: false, delay: "0.5s" },
+  { id: 5, text: "-8", style: "top-[50%] right-[6%]", dark: false, delay: "1.5s" },
+  { id: 6, text: "5x9", style: "bottom-[18%] right-[10%]", dark: false, delay: "2.5s" },
+  { id: 7, text: "24", style: "bottom-[12%] left-[18%]", dark: true, delay: "0.8s" },
+  { id: 8, text: "12", style: "top-[14%] right-[16%]", dark: true, delay: "1.8s" },
 ];
 
 export default function HeroSection() {
@@ -69,14 +69,14 @@ export default function HeroSection() {
       {/* Math tiles */}
       {MATH_TILES.map((tile) => (
         <div
-          key={tile.text}
+          key={tile.id}
           className={cn(
             "absolute font-mono text-sm font-bold px-3 py-1.5 rounded-lg animate-float pointer-events-none hidden md:block",
             tile.dark
               ? "bg-[#0a0a0a] border border-white/10 text-white/60"
               : "bg-white/10 backdrop-blur-sm text-white/80 border border-white/10"
           )}
-          style={{ animationDelay: `${Math.random() * 3}s` }}
+          style={{ animationDelay: tile.delay }}
         >
           <span
               className={

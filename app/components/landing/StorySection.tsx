@@ -132,7 +132,7 @@ export default function StorySection() {
             ))}
 
             {/* X-axis labels */}
-            {["2009", "2011", "2015", "Present"].map((label, i) => (
+            {["2009", "2011", "2015", new Date().getFullYear().toString()].map((label, i) => (
               <text
                 key={label}
                 x={60 + i * 70}
