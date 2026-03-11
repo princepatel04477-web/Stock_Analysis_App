@@ -230,11 +230,12 @@ def _do_fetch_indices() -> dict:
         except Exception:
             pass
 
-    # Compute market breadth from Nifty 50 stocks
-    movers = _fetch_stock_movers(NIFTY50_SYMBOLS)
-    advances = sum(1 for s in movers if s["change_percent"] > 0)
-    declines = sum(1 for s in movers if s["change_percent"] < 0)
-    unchanged = len(movers) - advances - declines
+    # Reuse the movers cache when available to avoid a redundant batch download
+    movers_data = get_cached("movers", 300, _do_fetch_movers)
+    all_stocks = movers_data.get("gainers", []) + movers_data.get("losers", [])
+    advances = sum(1 for s in all_stocks if s["change_percent"] > 0)
+    declines = sum(1 for s in all_stocks if s["change_percent"] < 0)
+    unchanged = len(all_stocks) - advances - declines
 
     return {
         "indices": indices_data,

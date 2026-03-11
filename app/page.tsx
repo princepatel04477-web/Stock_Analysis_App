@@ -773,7 +773,7 @@ export default function Home() {
       setResult(data);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Analysis failed";
-      setError(msg);
+      setError(`Failed to analyze ${symbol}: ${msg}`);
     } finally {
       setLoading(false);
     }

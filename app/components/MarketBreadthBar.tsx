@@ -60,7 +60,7 @@ export default function MarketBreadthBar() {
         padding: "0 24px",
         fontSize: 12,
         position: "sticky",
-        top: 0,
+        top: 56,
         zIndex: 49,
       }}
     >
