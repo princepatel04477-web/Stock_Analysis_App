@@ -1,12 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --border: rgba(255,255,255,0.07);
+  --accent: #39FF14;
+  --accent-2: #b8f752;
+  --text: #ffffff;
+  --muted: #6b7280;
+  --radius: 12px;
+}
 
 * {
   box-sizing: border-box;
 }
 
-body {
-  background-color: #0E1117;
-  color: #FAFAFA;
+html {
+  scroll-behavior: smooth;
 }
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(57,255,20,0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(57,255,20,0.5);
+}
+
+/* Keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(57,255,20,0.3); }
+  50% { box-shadow: 0 0 40px rgba(57,255,20,0.7); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes ticker-scroll-reverse {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes particle-drift {
+  0% { transform: translateY(100vh) translateX(0px); opacity: 0; }
+  10% { opacity: 0.7; }
+  90% { opacity: 0.7; }
+  100% { transform: translateY(-20px) translateX(30px); opacity: 0; }
+}
+
+@keyframes beam-expand {
+  0% { transform: scale(0) rotate(0deg); opacity: 0.8; }
+  100% { transform: scale(3) rotate(45deg); opacity: 0; }
+}
+
+@keyframes laser-x {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+@keyframes laser-y {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes text-reveal {
+  0% { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0% 0 0); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+.animate-ticker { animation: ticker-scroll 30s linear infinite; }
+.animate-ticker-reverse { animation: ticker-scroll-reverse 30s linear infinite; }
+.animate-ticker-fast { animation: ticker-scroll 20s linear infinite; }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }
+
+.shimmer-btn {
+  background: linear-gradient(90deg, #39FF14 0%, #b8f752 25%, #39FF14 50%, #b8f752 75%, #39FF14 100%);
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+.green-glow-text {
+  text-shadow: 0 0 20px rgba(57,255,20,0.5), 0 0 40px rgba(57,255,20,0.3);
+}
+
+.green-glow-box {
+  box-shadow: 0 0 30px rgba(57,255,20,0.2), 0 0 60px rgba(57,255,20,0.1);
+}
+
+/* Fade bottom mask for pricing table */
+.fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+}
+
