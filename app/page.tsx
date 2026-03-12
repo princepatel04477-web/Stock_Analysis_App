@@ -11,6 +11,7 @@ import MarketBreadthBar from "@/components/MarketBreadthBar";
 import TickerBar from "@/components/TickerBar";
 import MarketMovers from "@/components/MarketMovers";
 import SectorHeatmap from "@/components/SectorHeatmap";
+import NavbarSearch, { MobileNavbarSearch } from "@/components/NavbarSearch";
 
 // ──────────────────────────────────────────────
 // Mini sparkline SVG for the hero card mockup
@@ -800,12 +801,18 @@ export default function Home() {
           zIndex: 50,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <span style={{ fontSize: 20, fontWeight: 800 }}>⚡ NiftyPulse</span>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
             Powered by Groq + Perplexity
           </span>
         </div>
+
+        {/* Center: NavbarSearch (hidden on mobile via CSS) */}
+        <NavbarSearch stocks={stocks} loading={loading} onAnalyze={handleAnalyze} />
+
+        {/* Right: CTA button */}
         <button
           onClick={scrollToAnalyze}
           style={{
@@ -817,6 +824,7 @@ export default function Home() {
             fontSize: 13,
             fontWeight: 700,
             cursor: "pointer",
+            flexShrink: 0,
           }}
         >
           Analyze Stock →
@@ -831,6 +839,18 @@ export default function Home() {
 
       {/* Change 5: Hero section */}
       <HeroSection onScrollToAnalyze={scrollToAnalyze} />
+
+      {/* Mobile search bar — visible only on < 768px (nb-mobile-search class controls visibility) */}
+      <div
+        className="nb-mobile-search"
+        style={{
+          padding: "12px 20px",
+          background: "#0a0a0a",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+        }}
+      >
+        <MobileNavbarSearch stocks={stocks} loading={loading} onAnalyze={handleAnalyze} />
+      </div>
 
       {/* Stats */}
       <StatsSection />

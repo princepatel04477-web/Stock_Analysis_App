@@ -70,3 +70,28 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* NavbarSearch skeleton pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+.nb-skeleton {
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  height: 40px;
+  animation: pulse 1.5s ease infinite;
+}
+
+/* Responsive: hide navbar search on < 768px, shrink on 768-1024px */
+@media (max-width: 767px) {
+  .nb-search-wrapper { display: none !important; }
+  .nb-mobile-search  { display: flex !important; }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+  .nb-search-wrapper { width: 240px !important; }
+  .nb-mobile-search  { display: none !important; }
+}
+@media (min-width: 1025px) {
+  .nb-mobile-search { display: none !important; }
+}
