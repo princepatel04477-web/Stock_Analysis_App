@@ -1,18 +1,20 @@
 "use client";
 import { useState, useEffect } from "react";
-import { fetchStocks, fetchAnalysis, AnalyzeResponse } from "@/lib/api";
+import { fetchStocks, fetchAnalysis, fetchPrediction, AnalyzeResponse, Prediction } from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
 import TechnicalSnapshot from "@/components/TechnicalSnapshot";
 import SignalGauge from "@/components/SignalGauge";
 import PriceChart from "@/components/PriceChart";
 import NewsCard from "@/components/NewsCard";
+import MLSignalCard from "@/components/MLSignalCard";
 
 export default function Home() {
   const [stocks, setStocks]   = useState<string[]>([]);
   const [result, setResult]   = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
 
   // Load stock list once on mount
   useEffect(() => {
@@ -24,9 +26,14 @@ export default function Home() {
   const handleAnalyze = async (symbol: string) => {
     setLoading(true);
     setError(null);
+    setPrediction(null);
     try {
       const data = await fetchAnalysis(symbol);
       setResult(data);
+      // Fire ML prediction in background (non-blocking)
+      fetchPrediction(symbol)
+        .then((res) => setPrediction(res.prediction))
+        .catch(() => {});
     } catch (e: any) {
       setError(e.message || "Analysis failed");
     } finally {
@@ -88,10 +95,13 @@ export default function Home() {
             <SignalGauge analysis={result.analysis} />
           </div>
 
-          {/* Row 2: Price Chart */}
+          {/* Row 2: ML Prediction */}
+          {prediction && <MLSignalCard prediction={prediction} />}
+
+          {/* Row 3: Price Chart */}
           <PriceChart symbol={result.symbol} chartData={result.chart_data} />
 
-          {/* Row 3: News */}
+          {/* Row 4: News */}
           <NewsCard marketData={result.market_data} />
 
           {/* Footer Disclaimer */}

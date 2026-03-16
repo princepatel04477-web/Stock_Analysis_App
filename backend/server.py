@@ -9,6 +9,7 @@ from backend.database import get_all_stocks, get_cached_analysis, save_analysis
 from backend.price_service import fetch_market_data, fetch_chart_data, fetch_stock_news
 from backend.utils_perplexity import fetch_latest_data_perplexity
 from backend.utils_groq import analyze_stock_groq
+from backend.ml_service import predict_signal
 
 app = FastAPI(title="NiftyPulse API")
 
@@ -144,6 +145,29 @@ def history(symbol: str, limit: int = 10):
         return []
     except Exception:
         return []
+
+
+@app.get("/api/predict/{symbol}")
+def predict(symbol: str):
+    symbol = symbol.upper().strip()
+
+    # Gather news text for VADER sentiment (reuse perplexity/yfinance data)
+    news_text = ""
+    perplexity_key = os.getenv("PERPLEXITY_API_KEY", "")
+    if perplexity_key:
+        pdata = fetch_latest_data_perplexity(symbol, perplexity_key)
+        if "error" not in pdata:
+            news_text = pdata.get("news_summary", "")
+    else:
+        from backend.price_service import fetch_stock_news
+        news_items = fetch_stock_news(symbol)
+        news_text = " ".join(item["title"] for item in news_items[:3])
+
+    try:
+        result = predict_signal(symbol, news_text)
+        return {"symbol": symbol, "prediction": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")

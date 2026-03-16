@@ -2,7 +2,11 @@ fastapi
 uvicorn[standard]
 yfinance
 pandas
+numpy
 ta
 supabase
 python-dotenv
 requests
+scikit-learn
+lime
+nltk
