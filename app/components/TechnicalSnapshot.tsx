@@ -1,5 +1,6 @@
 "use client";
 import { MarketData } from "@/lib/api";
+import { formatINR, formatINRInt } from "@/lib/format";
 
 interface Props {
   marketData: MarketData;
@@ -23,10 +24,10 @@ export default function TechnicalSnapshot({ marketData }: Props) {
 
   const rows = [
     { label: "RSI (14)", value: rsi_14?.toFixed(1), color: rsiColor, badge: rsiLabel },
-    { label: "SMA (20)", value: `₹${sma_20?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` },
-    { label: "SMA (50)", value: `₹${sma_50?.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` },
+    { label: "SMA (20)", value: sma_20 != null ? formatINR(sma_20) : "N/A" },
+    { label: "SMA (50)", value: sma_50 != null ? formatINR(sma_50) : "N/A" },
     { label: "Analyst Rating", value: analyst_rating, color: ratingColor },
-    { label: "Target Price", value: analyst_target_price > 0 ? `₹${analyst_target_price.toLocaleString("en-IN")}` : "N/A" },
+    { label: "Target Price", value: analyst_target_price > 0 ? formatINRInt(analyst_target_price) : "N/A" },
   ];
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 import { Analysis } from "@/lib/api";
+import { formatINRInt } from "@/lib/format";
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from "recharts";
 
 interface Props {
@@ -47,7 +48,7 @@ export default function SignalGauge({ analysis }: Props) {
           </div>
           {target_price > 0 && (
             <div className="text-[#8B949E] text-sm mt-1">
-              Target: <span className="text-white font-semibold">₹{target_price.toLocaleString("en-IN")}</span>
+              Target: <span className="text-white font-semibold">{formatINRInt(target_price)}</span>
             </div>
           )}
         </div>
