@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { fetchStocks, fetchAnalysis, AnalyzeResponse } from "@/lib/api";
+import { fetchStocks, fetchAnalysis, fetchPrediction, AnalyzeResponse, Prediction } from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
 import TechnicalSnapshot from "@/components/TechnicalSnapshot";
@@ -12,6 +12,7 @@ import TickerBar from "@/components/TickerBar";
 import MarketMovers from "@/components/MarketMovers";
 import SectorHeatmap from "@/components/SectorHeatmap";
 import NavbarSearch, { MobileNavbarSearch } from "@/components/NavbarSearch";
+import MLSignalCard from "@/components/MLSignalCard";
 
 // ──────────────────────────────────────────────
 // Mini sparkline SVG for the hero card mockup
@@ -463,12 +464,14 @@ function AnalysisSection({
   loading,
   error,
   result,
+  prediction,
 }: {
   stocks: string[];
   onAnalyze: (s: string) => void;
   loading: boolean;
   error: string | null;
   result: AnalyzeResponse | null;
+  prediction: Prediction | null;
 }) {
   return (
     <section
@@ -540,6 +543,7 @@ function AnalysisSection({
               <TechnicalSnapshot marketData={result.market_data} />
               <SignalGauge analysis={result.analysis} />
             </div>
+            {prediction && <MLSignalCard prediction={prediction} />}
             <PriceChart symbol={result.symbol} chartData={result.chart_data} />
             <NewsCard marketData={result.market_data} />
             <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12, paddingBottom: 8 }}>
@@ -759,6 +763,7 @@ export default function Home() {
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [prediction, setPrediction] = useState<Prediction | null>(null);
 
   useEffect(() => {
     fetchStocks()
@@ -769,9 +774,14 @@ export default function Home() {
   const handleAnalyze = async (symbol: string) => {
     setLoading(true);
     setError(null);
+    setPrediction(null);
     try {
       const data = await fetchAnalysis(symbol);
       setResult(data);
+      // Fire ML prediction in background (non-blocking)
+      fetchPrediction(symbol)
+        .then((res) => setPrediction(res.prediction))
+        .catch(() => {});
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Analysis failed";
       setError(`Failed to analyze ${symbol}: ${msg}`);
@@ -874,6 +884,7 @@ export default function Home() {
         loading={loading}
         error={error}
         result={result}
+        prediction={prediction}
       />
 
       <Footer />

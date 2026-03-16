@@ -43,6 +43,30 @@ export interface AnalyzeResponse {
   from_cache: boolean;
 }
 
+export interface LimeFeature {
+  feature: string;
+  weight: number;
+}
+
+export interface PredictionExplanation {
+  sentiment_weight: number;
+  price_above_sma: boolean;
+  volatility: string;
+}
+
+export interface Prediction {
+  signal: "BUY" | "SELL" | "NEUTRAL";
+  confidence: number;
+  explanation: PredictionExplanation;
+  lime_features: LimeFeature[];
+  error?: string;
+}
+
+export interface PredictResponse {
+  symbol: string;
+  prediction: Prediction;
+}
+
 export interface SignalHistory {
   analyzed_at: string;
   signal: string;
@@ -114,6 +138,18 @@ export async function fetchAnalysis(symbol: string): Promise<AnalyzeResponse> {
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.detail || "Analysis failed");
+  }
+  return res.json();
+}
+
+// Fetch ML prediction for a symbol
+export async function fetchPrediction(symbol: string): Promise<PredictResponse> {
+  const res = await fetch(`${BASE_URL}/api/predict/${symbol}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Prediction failed");
   }
   return res.json();
 }

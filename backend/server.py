@@ -12,6 +12,7 @@ from backend.database import get_all_stocks, get_cached_analysis, save_analysis
 from backend.price_service import fetch_market_data, fetch_chart_data, fetch_stock_news
 from backend.utils_perplexity import fetch_latest_data_perplexity
 from backend.utils_groq import analyze_stock_groq
+from backend.ml_service import predict_signal
 
 app = FastAPI(title="NiftyPulse API")
 
@@ -390,6 +391,33 @@ def analyze(symbol: str):
         "chart_data": chart_data,
         "from_cache": False,
     }
+
+
+@app.get("/api/predict/{symbol}")
+def predict(symbol: str):
+    """Return SVM-based ML prediction with LIME explanations."""
+    symbol = symbol.upper().strip()
+
+    # Gather news text for sentiment — reuse Perplexity if available
+    news_text = ""
+    perplexity_key = os.getenv("PERPLEXITY_API_KEY", "")
+    if perplexity_key:
+        try:
+            perp_data = fetch_latest_data_perplexity(symbol, perplexity_key)
+            if "error" not in perp_data:
+                news_text = perp_data.get("news_summary", "")
+        except Exception:
+            pass
+
+    if not news_text:
+        try:
+            news_items = fetch_stock_news(symbol)
+            news_text = " ".join([item["title"] for item in news_items[:5]])
+        except Exception:
+            pass
+
+    result = predict_signal(symbol, news_text)
+    return {"symbol": symbol, "prediction": result}
 
 
 @app.get("/api/history/{symbol}")

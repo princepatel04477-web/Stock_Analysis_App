@@ -6,3 +6,7 @@ ta
 supabase
 python-dotenv
 requests
+scikit-learn
+lime
+nltk
+numpy

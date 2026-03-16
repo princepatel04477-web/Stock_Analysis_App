@@ -1,5 +1,6 @@
 "use client";
 import { MarketData } from "@/lib/api";
+import { formatINR } from "@/lib/format";
 
 interface Props {
   symbol: string;
@@ -19,18 +20,18 @@ export default function StockHeader({ symbol, marketData, fromCache }: Props) {
           <span className="text-xs bg-[#2E3245] text-[#8B949E] px-2 py-1 rounded">NSE</span>
           {fromCache && (
             <span className="text-xs bg-[#1f3a1f] text-[#3FB950] px-2 py-1 rounded border border-[#3FB950]/30">
-              ⚡ Cached
+              Cached
             </span>
           )}
         </div>
         <p className="text-[#8B949E] mt-1">{company_name}</p>
         {sector && sector !== "N/A" && (
-          <p className="text-[#8B949E] text-sm mt-0.5">📂 {sector}</p>
+          <p className="text-[#8B949E] text-sm mt-0.5">{sector}</p>
         )}
       </div>
 
       <div className="text-right">
-        <div className="text-4xl font-bold">₹{current_price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div className="text-4xl font-bold">{formatINR(current_price)}</div>
         <span className={`inline-block mt-1 px-3 py-1 rounded-full text-sm font-semibold ${
           isPositive
             ? "bg-[#3FB950]/20 text-[#3FB950]"
