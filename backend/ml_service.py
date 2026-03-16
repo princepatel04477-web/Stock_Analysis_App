@@ -70,11 +70,11 @@ def _build_labels(df: pd.DataFrame, horizon: int = 5) -> pd.Series:
 def _fetch_training_data(symbol: str) -> pd.DataFrame:
     """Fetch ~5.5 years of daily OHLCV via yfinance."""
     ticker = symbol.upper().strip()
-    if not ticker.endswith(".NS") and not ticker.endswith(".BO"):
+    # Do NOT append .NS for index symbols (start with ^) or already-suffixed tickers
+    if not ticker.startswith("^") and not ticker.endswith(".NS") and not ticker.endswith(".BO"):
         ticker = f"{ticker}.NS"
 
     stock = yf.Ticker(ticker)
-    # Use '5y' (supported by yfinance) then extend slightly via max if needed
     df = stock.history(period="5y")
     if df.empty:
         raise ValueError(f"No historical data found for {symbol}")
@@ -82,7 +82,7 @@ def _fetch_training_data(symbol: str) -> pd.DataFrame:
     df.reset_index(inplace=True)
     df.columns = [c.lower() for c in df.columns]
 
-    # Drop rows where close price is NaN or zero (common in Indian stock data gaps)
+    # Drop rows where close price is NaN or zero
     df = df.dropna(subset=["close"])
     df = df[df["close"] > 0].reset_index(drop=True)
 
@@ -163,7 +163,9 @@ def predict_signal(symbol: str, news_text: str = "") -> dict[str, Any]:
         ]
 
         # --- volatility label ------------------------------------------------
-        recent_returns = df["close"].pct_change().tail(20).std()
+        # Use the filtered df rows that correspond to the valid index
+        valid_close = df.loc[valid[finite_mask]]["close"] if len(valid) == len(finite_mask) else df["close"].iloc[valid]
+        recent_returns = valid_close.pct_change().tail(20).std()
         if pd.isna(recent_returns):
             volatility = "N/A"
         elif recent_returns > 0.03:
@@ -173,8 +175,15 @@ def predict_signal(symbol: str, news_text: str = "") -> dict[str, Any]:
         else:
             volatility = "Low"
 
+        # Use the last row of the *filtered* features (X[-1]) to read sma_20
         current_price = float(df["close"].iloc[-1])
-        sma_20_val = float(features["sma_20"].iloc[-1]) if pd.notna(features["sma_20"].iloc[-1]) else current_price
+        # X[-1] column order: sma_20, ema_20, momentum, sentiment
+        sma_20_val = float(X[-1][0])  # index 0 = sma_20 (before scaling, raw value from features)
+
+        # Re-read from filtered features for accuracy (X is post-StandardScaler order but pre-fit)
+        filtered_features = features.loc[valid]
+        filtered_features = filtered_features[np.isfinite(filtered_features.values).all(axis=1)]
+        sma_20_val = float(filtered_features["sma_20"].iloc[-1])
 
         return {
             "signal": signal,
