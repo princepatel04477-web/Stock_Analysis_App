@@ -50,10 +50,18 @@ $env:GROQ_API_KEY="your_groq_key"
 $env:PERPLEXITY_API_KEY="your_perplexity_key"
 ```
 
+For the frontend login page, set these in `.env.local`:
+
+```powershell
+$env:NEXT_PUBLIC_SUPABASE_URL="https://bvrkpzvwmsprsjqxheuf.supabase.co"
+$env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY="sb_publishable_34ad_Z61-J9Z0Rvkeq47rg_05AKHjCd"
+```
+
+Then open `http://localhost:5000/login`.
+
 ## If PowerShell blocks activation
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
-
