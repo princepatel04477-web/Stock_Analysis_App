@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabase";
+import { createSupabaseClient } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const supabase = getSupabaseClient();
+      const supabase = createSupabaseClient();
       const { error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -31,7 +31,11 @@ export default function LoginPage() {
 
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to log in right now.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again or contact support if the problem persists."
+      );
     } finally {
       setLoading(false);
     }

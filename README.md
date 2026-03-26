@@ -53,8 +53,8 @@ $env:PERPLEXITY_API_KEY="your_perplexity_key"
 For the frontend login page, set these in `.env.local`:
 
 ```powershell
-$env:NEXT_PUBLIC_SUPABASE_URL="https://bvrkpzvwmsprsjqxheuf.supabase.co"
-$env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY="sb_publishable_34ad_Z61-J9Z0Rvkeq47rg_05AKHjCd"
+$env:NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
+$env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY="your_supabase_publishable_key"
 ```
 
 Then open `http://localhost:5000/login`.
