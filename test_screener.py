@@ -1,5 +1,11 @@
 import unittest
 from unittest.mock import patch
+import types
+import sys
+
+fake_ml_service = types.ModuleType("backend.ml_service")
+fake_ml_service.predict_signal = lambda *_args, **_kwargs: {}
+sys.modules["backend.ml_service"] = fake_ml_service
 
 from backend.server import run_screener, screener
 
