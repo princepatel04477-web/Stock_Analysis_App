@@ -1,20 +1,48 @@
 import os
 import time
+import asyncio
 import yfinance as yf
 import pandas as pd
+from collections import Counter
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from backend.database import get_all_stocks, get_cached_analysis, save_analysis
+from backend.database import (
+    get_all_stocks,
+    get_cached_analysis,
+    save_analysis,
+    save_signal_tracking,
+    get_signals_tracking_older_than_days,
+    update_signal_tracking_result,
+)
 from backend.price_service import fetch_market_data, fetch_chart_data, fetch_stock_news
 from backend.utils_perplexity import fetch_latest_data_perplexity
-from backend.utils_groq import analyze_stock_groq
+from backend.utils_groq import analyze_stock_groq, analyze_stock_groq_mixtral, analyze_stock_groq_gemma
 from backend.ml_service import predict_signal
 
 app = FastAPI(title="NiftyPulse API")
+
+
+MODEL_METADATA = {
+    "llama": "Llama 3.3 70B",
+    "mixtral": "Mixtral 8x7B",
+    "gemma": "Gemma 2 9B",
+}
+
+
+class MultiModelAnalyzeRequest(BaseModel):
+    symbol: str
+
+
+class TrackSignalRequest(BaseModel):
+    symbol: str
+    signal: str
+    price_at_signal: float
+    model_id: str
 
 # ---------------------------------------------------------------------------
 # In-memory cache utility
@@ -328,23 +356,7 @@ def generate_simple_analysis(ticker, market_data):
     }
 
 
-@app.get("/api/stocks")
-def get_stocks():
-    try:
-        stocks = get_all_stocks()
-        return stocks
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/analyze/{symbol}")
-def analyze(symbol: str):
-    symbol = symbol.upper().strip()
-
-    market_data = fetch_market_data(symbol)
-    if "error" in market_data:
-        raise HTTPException(status_code=400, detail=market_data["error"])
-
+def enrich_market_data(symbol: str, market_data: dict):
     perplexity_key = os.getenv("PERPLEXITY_API_KEY", "")
     if perplexity_key:
         perplexity_data = fetch_latest_data_perplexity(symbol, perplexity_key)
@@ -369,6 +381,75 @@ def analyze(symbol: str):
         market_data["company_name"] = symbol
         market_data["sector"] = ""
 
+    return market_data
+
+
+def calculate_confidence(market_data, signal):
+    rsi = market_data.get("rsi_14", 50)
+    price = market_data.get("current_price", 0)
+    sma20 = market_data.get("sma_20", 0)
+    sma50 = market_data.get("sma_50", 0)
+    sentiment = market_data.get("sentiment", "Neutral")
+
+    indicators_agreeing = 0
+    total_indicators = 4
+
+    if signal in ["BUY", "STRONG BUY"]:
+        if rsi < 50:
+            indicators_agreeing += 1
+        if price > sma20:
+            indicators_agreeing += 1
+        if price > sma50:
+            indicators_agreeing += 1
+        if sentiment == "Positive":
+            indicators_agreeing += 1
+    elif signal in ["SELL", "STRONG SELL"]:
+        if rsi > 50:
+            indicators_agreeing += 1
+        if price < sma20:
+            indicators_agreeing += 1
+        if price < sma50:
+            indicators_agreeing += 1
+        if sentiment == "Negative":
+            indicators_agreeing += 1
+    else:
+        indicators_agreeing = 2
+
+    confidence = round((indicators_agreeing / total_indicators) * 100)
+    return confidence
+
+
+def fetch_live_price(symbol: str):
+    ticker = symbol.upper().strip()
+    if not ticker.endswith(".NS") and not ticker.endswith(".BO"):
+        ticker = f"{ticker}.NS"
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.fast_info
+        return float(info.last_price)
+    except Exception:
+        return None
+
+
+@app.get("/api/stocks")
+def get_stocks():
+    try:
+        stocks = get_all_stocks()
+        return stocks
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/analyze/{symbol}")
+def analyze(symbol: str):
+    symbol = symbol.upper().strip()
+
+    market_data = fetch_market_data(symbol)
+    if "error" in market_data:
+        raise HTTPException(status_code=400, detail=market_data["error"])
+
+    market_data = enrich_market_data(symbol, market_data)
+
     groq_key = os.getenv("GROQ_API_KEY", "")
     if groq_key:
         analysis = analyze_stock_groq(symbol, market_data, groq_key)
@@ -390,6 +471,140 @@ def analyze(symbol: str):
         "analysis": analysis,
         "chart_data": chart_data,
         "from_cache": False,
+    }
+
+
+@app.post("/api/analyze/multi-model")
+async def analyze_multi_model(payload: MultiModelAnalyzeRequest):
+    symbol = payload.symbol.upper().strip()
+
+    market_data = fetch_market_data(symbol)
+    if "error" in market_data:
+        raise HTTPException(status_code=400, detail=market_data["error"])
+
+    market_data = enrich_market_data(symbol, market_data)
+    groq_key = os.getenv("GROQ_API_KEY", "")
+
+    if not groq_key:
+        raise HTTPException(status_code=400, detail="Groq API Key is missing.")
+
+    async def run_model(model_id, model_name, fn):
+        analysis = await asyncio.to_thread(fn, symbol, market_data, groq_key)
+        if "error" in analysis:
+            analysis = generate_simple_analysis(symbol, market_data)
+
+        signal = analysis.get("signal", "HOLD")
+        confidence = calculate_confidence(market_data, signal)
+        target_price = analysis.get("target_price", market_data.get("current_price", 0))
+        try:
+            target_price = float(target_price)
+        except (TypeError, ValueError):
+            target_price = market_data.get("current_price", 0)
+
+        return {
+            "model_name": model_name,
+            "model_id": model_id,
+            "signal": signal,
+            "target_price": target_price,
+            "confidence": confidence,
+            "reasoning": analysis.get("reasoning", []),
+            "summary": analysis.get("summary", ""),
+        }
+
+    models = await asyncio.gather(
+        run_model("llama", MODEL_METADATA["llama"], analyze_stock_groq),
+        run_model("mixtral", MODEL_METADATA["mixtral"], analyze_stock_groq_mixtral),
+        run_model("gemma", MODEL_METADATA["gemma"], analyze_stock_groq_gemma),
+    )
+
+    signals = [m["signal"] for m in models]
+    consensus_signal = Counter(signals).most_common(1)[0][0]
+    avg_confidence = round(sum(m["confidence"] for m in models) / len(models)) if models else 0
+    models_agreeing = sum(1 for m in models if m["signal"] == consensus_signal)
+
+    return {
+        "symbol": symbol,
+        "market_data": market_data,
+        "models": models,
+        "consensus": {
+            "signal": consensus_signal,
+            "confidence": avg_confidence,
+            "models_agreeing": models_agreeing,
+            "total_models": len(models),
+        },
+    }
+
+
+@app.post("/api/signals/track")
+def track_signal(payload: TrackSignalRequest):
+    symbol = payload.symbol.upper().strip()
+    signal = payload.signal.upper().strip()
+    model_id = payload.model_id.lower().strip()
+
+    try:
+        record = save_signal_tracking(
+            symbol=symbol,
+            signal=signal,
+            price_at_signal=payload.price_at_signal,
+            model_id=model_id,
+        )
+        return {"status": "tracked", "data": record}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/signals/accuracy/{model_id}")
+def signals_accuracy(model_id: str):
+    model_key = model_id.lower().strip()
+    rows = get_signals_tracking_older_than_days(model_key, 7)
+
+    total = 0
+    correct = 0
+    returns = []
+
+    for row in rows:
+        symbol = (row.get("symbol") or "").upper().strip()
+        signal = (row.get("signal") or "").upper().strip()
+        price_at_signal = row.get("price_at_signal")
+        signal_id = row.get("id")
+
+        if not symbol or price_at_signal in (None, 0):
+            continue
+
+        current_price = fetch_live_price(symbol)
+        if current_price in (None, 0):
+            continue
+
+        return_percent = ((float(current_price) - float(price_at_signal)) / float(price_at_signal)) * 100
+
+        if signal in ("BUY", "STRONG BUY"):
+            was_correct = current_price > price_at_signal
+        elif signal in ("SELL", "STRONG SELL"):
+            was_correct = current_price < price_at_signal
+        else:
+            was_correct = abs(return_percent) < 2
+
+        total += 1
+        if was_correct:
+            correct += 1
+        returns.append(return_percent)
+
+        if signal_id:
+            try:
+                update_signal_tracking_result(signal_id, current_price, was_correct, return_percent)
+            except Exception:
+                pass
+
+    win_rate = round((correct / total) * 100, 1) if total else 0.0
+    avg_return = round(sum(returns) / len(returns), 1) if returns else 0.0
+
+    return {
+        "model_id": model_key,
+        "model_name": MODEL_METADATA.get(model_key, model_key.upper()),
+        "total_signals": total,
+        "correct": correct,
+        "win_rate": win_rate,
+        "avg_return": avg_return,
     }
 
 

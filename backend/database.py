@@ -105,3 +105,51 @@ def get_price_history(symbol, days=180):
         .execute()
     )
     return res.data
+
+
+def save_signal_tracking(symbol, signal, price_at_signal, model_id, user_id=None):
+    client = get_client()
+    payload = {
+        "symbol": symbol,
+        "signal": signal,
+        "price_at_signal": price_at_signal,
+        "model_id": model_id,
+    }
+    if user_id:
+        payload["user_id"] = user_id
+    res = client.table("signals_tracking").insert(payload).execute()
+    if not res.data:
+        return None
+    return res.data[0]
+
+
+def get_signals_tracking_older_than_days(model_id, days):
+    from datetime import datetime, timedelta, timezone
+
+    client = get_client()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    res = (
+        client.table("signals_tracking")
+        .select("*")
+        .eq("model_id", model_id)
+        .lte("signal_date", cutoff)
+        .execute()
+    )
+    return res.data or []
+
+
+def update_signal_tracking_result(signal_id, current_price, was_correct, return_percent):
+    from datetime import datetime, timezone
+
+    client = get_client()
+    return (
+        client.table("signals_tracking")
+        .update({
+            "current_price": current_price,
+            "was_correct": was_correct,
+            "return_percent": return_percent,
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+        })
+        .eq("id", signal_id)
+        .execute()
+    )

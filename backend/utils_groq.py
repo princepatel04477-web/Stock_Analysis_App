@@ -9,7 +9,7 @@ load_dotenv()
 GROQ_API_KEY_DEFAULT = os.getenv("GROQ_API_KEY", "")
 
 
-def analyze_stock_groq(ticker, market_data, api_key=None):
+def _analyze_stock_groq_with_model(ticker, market_data, model, api_key=None):
     if api_key is None:
         api_key = GROQ_API_KEY_DEFAULT
 
@@ -51,7 +51,7 @@ def analyze_stock_groq(ticker, market_data, api_key=None):
     """
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -84,3 +84,30 @@ def analyze_stock_groq(ticker, market_data, api_key=None):
         return {"error": f"Groq API HTTP Error: {str(e)}"}
     except Exception as e:
         return {"error": f"Groq API Error: {str(e)}"}
+
+
+def analyze_stock_groq(ticker, market_data, api_key=None):
+    return _analyze_stock_groq_with_model(
+        ticker=ticker,
+        market_data=market_data,
+        model="llama-3.3-70b-versatile",
+        api_key=api_key,
+    )
+
+
+def analyze_stock_groq_mixtral(ticker, market_data, api_key=None):
+    return _analyze_stock_groq_with_model(
+        ticker=ticker,
+        market_data=market_data,
+        model="mixtral-8x7b-32768",
+        api_key=api_key,
+    )
+
+
+def analyze_stock_groq_gemma(ticker, market_data, api_key=None):
+    return _analyze_stock_groq_with_model(
+        ticker=ticker,
+        market_data=market_data,
+        model="gemma2-9b-it",
+        api_key=api_key,
+    )

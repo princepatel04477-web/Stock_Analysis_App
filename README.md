@@ -50,10 +50,29 @@ $env:GROQ_API_KEY="your_groq_key"
 $env:PERPLEXITY_API_KEY="your_perplexity_key"
 ```
 
+## Supabase SQL for Signal Accuracy Tracking
+
+Run this SQL in Supabase to enable model signal tracking and 7-day accuracy metrics:
+
+```sql
+create table public.signals_tracking (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete set null,
+  symbol text not null,
+  model_id text not null,
+  signal text not null,
+  price_at_signal numeric not null,
+  current_price numeric,
+  was_correct boolean,
+  return_percent numeric,
+  signal_date timestamp with time zone default now(),
+  checked_at timestamp with time zone
+);
+```
+
 ## If PowerShell blocks activation
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
-

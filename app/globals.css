@@ -95,3 +95,18 @@ body {
 @media (min-width: 1025px) {
   .nb-mobile-search { display: none !important; }
 }
+
+@media (max-width: 900px) {
+  .mm-grid { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 980px) {
+  .acc-row,
+  .acc-head {
+    grid-template-columns: 60px 1.5fr 1fr 1fr !important;
+  }
+
+  .acc-hide-mobile {
+    display: none !important;
+  }
+}

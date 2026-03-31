@@ -1,6 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { fetchStocks, fetchAnalysis, fetchPrediction, AnalyzeResponse, Prediction } from "@/lib/api";
+import {
+  fetchStocks,
+  fetchAnalysis,
+  fetchPrediction,
+  fetchMultiModelAnalysis,
+  AnalyzeResponse,
+  Prediction,
+  MultiModelAnalyzeResponse,
+} from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
 import TechnicalSnapshot from "@/components/TechnicalSnapshot";
@@ -461,18 +469,47 @@ function HowItWorks() {
 function AnalysisSection({
   stocks,
   onAnalyze,
+  onRunMultiModel,
   loading,
+  multiModelLoading,
   error,
   result,
   prediction,
+  multiModelResult,
 }: {
   stocks: string[];
   onAnalyze: (s: string) => void;
+  onRunMultiModel: (s: string) => void;
   loading: boolean;
+  multiModelLoading: boolean;
   error: string | null;
   result: AnalyzeResponse | null;
   prediction: Prediction | null;
+  multiModelResult: MultiModelAnalyzeResponse | null;
 }) {
+  const getSignalColor = (signal: string) => {
+    if (signal === "STRONG BUY") return "#39FF14";
+    if (signal === "BUY") return "#4ade80";
+    if (signal === "HOLD") return "#f59e0b";
+    if (signal === "SELL") return "#f87171";
+    if (signal === "STRONG SELL") return "#ef4444";
+    return "#9ca3af";
+  };
+
+  const getConfidenceColor = (value: number) => {
+    if (value > 75) return "#39FF14";
+    if (value >= 50) return "#f59e0b";
+    return "#F85149";
+  };
+
+  const bestModelId =
+    multiModelResult && multiModelResult.models.length > 0
+      ? multiModelResult.models.reduce(
+          (best, model) => (model.confidence > best.confidence ? model : best),
+          multiModelResult.models[0],
+        ).model_id
+      : null;
+
   return (
     <section
       id="analyze"
@@ -544,6 +581,168 @@ function AnalysisSection({
               <SignalGauge analysis={result.analysis} />
             </div>
             {prediction && <MLSignalCard prediction={prediction} />}
+            <div
+              style={{
+                background: "#111",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 12,
+                padding: "20px 24px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#fff" }}>AI Model Comparison</h3>
+                <button
+                  onClick={() => onRunMultiModel(result.symbol)}
+                  disabled={multiModelLoading}
+                  style={{
+                    background: "#39FF14",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "10px 18px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: multiModelLoading ? "not-allowed" : "pointer",
+                    opacity: multiModelLoading ? 0.75 : 1,
+                  }}
+                >
+                  {multiModelLoading ? "Running..." : "Run Multi-Model Analysis"}
+                </button>
+              </div>
+
+              {multiModelLoading && (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+                  {[1, 2, 3].map((n) => (
+                    <div key={n} className="skeleton" style={{ height: 200, borderRadius: 12 }} />
+                  ))}
+                </div>
+              )}
+
+              {multiModelResult && !multiModelLoading && (
+                <>
+                  <div className="mm-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 16 }}>
+                    {multiModelResult.models.map((model) => (
+                      <div
+                        key={model.model_id}
+                        style={{
+                          background: "#111111",
+                          border: model.model_id === bestModelId ? "1px solid rgba(57,255,20,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 12,
+                          padding: 24,
+                          position: "relative",
+                          transition: "all 0.2s",
+                          boxShadow: model.model_id === bestModelId ? "0 0 20px rgba(57,255,20,0.08)" : "none",
+                        }}
+                      >
+                        {model.model_id === bestModelId && (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              right: 16,
+                              background: "#39FF14",
+                              color: "#000",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              padding: "3px 10px",
+                              borderRadius: "0 0 6px 6px",
+                            }}
+                          >
+                            Best Signal
+                          </div>
+                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <div style={{ fontSize: 13, color: "#6b7280", fontWeight: 600 }}>{model.model_name}</div>
+                          <span
+                            style={{
+                              background: "rgba(255,255,255,0.06)",
+                              borderRadius: 4,
+                              padding: "2px 8px",
+                              fontSize: 10,
+                              color: "#9ca3af",
+                              fontWeight: 600,
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {model.model_id}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            margin: "16px 0",
+                            fontSize: 22,
+                            fontWeight: 800,
+                            color: getSignalColor(model.signal),
+                            textShadow: model.signal === "STRONG BUY" ? "0 0 20px rgba(57,255,20,0.4)" : "none",
+                            textAlign: "center",
+                          }}
+                        >
+                          {model.signal}
+                        </div>
+                        <div style={{ fontSize: 14, color: "#9ca3af" }}>Target: ₹{Math.round(model.target_price)}</div>
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6b7280" }}>
+                            <span>Confidence</span>
+                            <span>{model.confidence}%</span>
+                          </div>
+                          <div
+                            style={{
+                              height: 6,
+                              borderRadius: 3,
+                              background: "rgba(255,255,255,0.08)",
+                              marginTop: 6,
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "100%",
+                                borderRadius: 3,
+                                width: `${Math.max(0, Math.min(100, model.confidence))}%`,
+                                transition: "width 0.8s ease",
+                                background: getConfidenceColor(model.confidence),
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 12, lineHeight: 1.5 }}>
+                          {model.summary}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 16,
+                      background: "rgba(57,255,20,0.06)",
+                      border: "1px solid rgba(57,255,20,0.15)",
+                      borderRadius: 12,
+                      padding: "20px 24px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13, color: "#6b7280" }}>Consensus Signal</div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: getSignalColor(multiModelResult.consensus.signal) }}>
+                        {multiModelResult.consensus.signal}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 13, color: "#6b7280" }}>
+                        {multiModelResult.consensus.models_agreeing}/{multiModelResult.consensus.total_models} models agree
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "#39FF14" }}>
+                        {multiModelResult.consensus.confidence}% confidence
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
             <PriceChart symbol={result.symbol} chartData={result.chart_data} />
             <NewsCard marketData={result.market_data} />
             <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12, paddingBottom: 8 }}>
@@ -762,8 +961,10 @@ export default function Home() {
   const [stocks, setStocks] = useState<string[]>([]);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [multiModelLoading, setMultiModelLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [multiModelResult, setMultiModelResult] = useState<MultiModelAnalyzeResponse | null>(null);
 
   useEffect(() => {
     fetchStocks()
@@ -775,6 +976,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setPrediction(null);
+    setMultiModelResult(null);
     try {
       const data = await fetchAnalysis(symbol);
       setResult(data);
@@ -787,6 +989,20 @@ export default function Home() {
       setError(`Failed to analyze ${symbol}: ${msg}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRunMultiModel = async (symbol: string) => {
+    setMultiModelLoading(true);
+    setError(null);
+    try {
+      const data = await fetchMultiModelAnalysis(symbol);
+      setMultiModelResult(data);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Multi-model analysis failed";
+      setError(`Failed to run multi-model analysis for ${symbol}: ${msg}`);
+    } finally {
+      setMultiModelLoading(false);
     }
   };
 
@@ -822,23 +1038,35 @@ export default function Home() {
         {/* Center: NavbarSearch (hidden on mobile via CSS) */}
         <NavbarSearch stocks={stocks} loading={loading} onAnalyze={handleAnalyze} />
 
-        {/* Right: CTA button */}
-        <button
-          onClick={scrollToAnalyze}
-          style={{
-            background: "#39FF14",
-            color: "#000",
-            border: "none",
-            borderRadius: 6,
-            padding: "6px 16px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          Analyze Stock →
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <a
+            href="/accuracy"
+            style={{
+              color: "#9ca3af",
+              fontSize: 13,
+              textDecoration: "none",
+              padding: "4px 8px",
+            }}
+          >
+            Accuracy Tracker
+          </a>
+          <button
+            onClick={scrollToAnalyze}
+            style={{
+              background: "#39FF14",
+              color: "#000",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 16px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Analyze Stock →
+          </button>
+        </div>
       </nav>
 
       {/* Change 4: Market breadth bar (sticky below navbar) */}
@@ -878,14 +1106,17 @@ export default function Home() {
       <DashboardShowcase />
 
       {/* Analysis section (existing functionality) */}
-      <AnalysisSection
-        stocks={stocks}
-        onAnalyze={handleAnalyze}
-        loading={loading}
-        error={error}
-        result={result}
-        prediction={prediction}
-      />
+        <AnalysisSection
+          stocks={stocks}
+          onAnalyze={handleAnalyze}
+          onRunMultiModel={handleRunMultiModel}
+          loading={loading}
+          multiModelLoading={multiModelLoading}
+          error={error}
+          result={result}
+          prediction={prediction}
+          multiModelResult={multiModelResult}
+        />
 
       <Footer />
     </div>

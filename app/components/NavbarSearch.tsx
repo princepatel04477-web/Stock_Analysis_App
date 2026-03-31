@@ -440,6 +440,19 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
                 })}
               </ul>
             )}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "10px 16px" }}>
+              <a
+                href="/accuracy"
+                style={{
+                  color: "#39FF14",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                📊 Open Accuracy Tracker
+              </a>
+            </div>
           </div>
         )}
       </div>
@@ -681,6 +694,19 @@ export function MobileNavbarSearch({ stocks, loading, onAnalyze }: NavbarSearchP
               })}
             </ul>
           )}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "10px 16px" }}>
+            <a
+              href="/accuracy"
+              style={{
+                color: "#39FF14",
+                fontSize: 12,
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              📊 Open Accuracy Tracker
+            </a>
+          </div>
         </div>
       )}
     </div>

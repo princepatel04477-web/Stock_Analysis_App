@@ -43,6 +43,39 @@ export interface AnalyzeResponse {
   from_cache: boolean;
 }
 
+export interface ModelComparisonResult {
+  model_name: string;
+  model_id: string;
+  signal: string;
+  target_price: number;
+  confidence: number;
+  reasoning: string[];
+  summary: string;
+}
+
+export interface MultiModelConsensus {
+  signal: string;
+  confidence: number;
+  models_agreeing: number;
+  total_models: number;
+}
+
+export interface MultiModelAnalyzeResponse {
+  symbol: string;
+  market_data: MarketData;
+  models: ModelComparisonResult[];
+  consensus: MultiModelConsensus;
+}
+
+export interface AccuracyResponse {
+  model_id: string;
+  model_name: string;
+  total_signals: number;
+  correct: number;
+  win_rate: number;
+  avg_return: number;
+}
+
 export interface LimeFeature {
   feature: string;
   weight: number;
@@ -138,6 +171,50 @@ export async function fetchAnalysis(symbol: string): Promise<AnalyzeResponse> {
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.detail || "Analysis failed");
+  }
+  return res.json();
+}
+
+export async function fetchMultiModelAnalysis(symbol: string): Promise<MultiModelAnalyzeResponse> {
+  const res = await fetch(`${BASE_URL}/api/analyze/multi-model`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ symbol }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Multi-model analysis failed");
+  }
+  return res.json();
+}
+
+export async function trackSignal(payload: {
+  symbol: string;
+  signal: string;
+  price_at_signal: number;
+  model_id: string;
+}): Promise<{ status: string }> {
+  const res = await fetch(`${BASE_URL}/api/signals/track`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Failed to track signal");
+  }
+  return res.json();
+}
+
+export async function fetchModelAccuracy(modelId: string): Promise<AccuracyResponse> {
+  const res = await fetch(`${BASE_URL}/api/signals/accuracy/${modelId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Failed to fetch model accuracy");
   }
   return res.json();
 }
