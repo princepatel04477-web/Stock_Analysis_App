@@ -1,6 +1,7 @@
 import os
 import time
 import asyncio
+import logging
 import yfinance as yf
 import pandas as pd
 from collections import Counter
@@ -25,6 +26,7 @@ from backend.utils_groq import analyze_stock_groq, analyze_stock_groq_mixtral, a
 from backend.ml_service import predict_signal
 
 app = FastAPI(title="NiftyPulse API")
+logger = logging.getLogger(__name__)
 
 
 MODEL_METADATA = {
@@ -427,8 +429,25 @@ def fetch_live_price(symbol: str):
         stock = yf.Ticker(ticker)
         info = stock.fast_info
         return float(info.last_price)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to fetch live price for %s: %s", symbol, exc)
         return None
+
+
+def sanitize_market_data_for_response(market_data: dict) -> dict:
+    sentiment = market_data.get("sentiment", "Neutral")
+    if sentiment not in {"Positive", "Negative", "Neutral"}:
+        sentiment = "Neutral"
+
+    return {
+        "current_price": float(market_data.get("current_price", 0) or 0),
+        "rsi_14": float(market_data.get("rsi_14", 0) or 0),
+        "sma_20": float(market_data.get("sma_20", 0) or 0),
+        "sma_50": float(market_data.get("sma_50", 0) or 0),
+        "change_percent": float(market_data.get("change_percent", 0) or 0),
+        "sentiment": sentiment,
+        "analyst_target_price": float(market_data.get("analyst_target_price", 0) or 0),
+    }
 
 
 @app.get("/api/stocks")
@@ -467,7 +486,7 @@ def analyze(symbol: str):
 
     return {
         "symbol": symbol,
-        "market_data": market_data,
+        "market_data": sanitize_market_data_for_response(market_data),
         "analysis": analysis,
         "chart_data": chart_data,
         "from_cache": False,
@@ -524,7 +543,7 @@ async def analyze_multi_model(payload: MultiModelAnalyzeRequest):
 
     return {
         "symbol": symbol,
-        "market_data": market_data,
+        "market_data": sanitize_market_data_for_response(market_data),
         "models": models,
         "consensus": {
             "signal": consensus_signal,
@@ -550,7 +569,8 @@ def track_signal(payload: TrackSignalRequest):
         )
         return {"status": "tracked", "data": record}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Failed to track signal for %s (%s)", symbol, model_id)
+        raise HTTPException(status_code=500, detail="Failed to track signal")
 
 
 @app.get("/api/signals/accuracy/{model_id}")
@@ -592,8 +612,8 @@ def signals_accuracy(model_id: str):
         if signal_id:
             try:
                 update_signal_tracking_result(signal_id, current_price, was_correct, return_percent)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to update signal tracking row %s: %s", signal_id, exc)
 
     win_rate = round((correct / total) * 100, 1) if total else 0.0
     avg_return = round(sum(returns) / len(returns), 1) if returns else 0.0

@@ -47,8 +47,15 @@ class TestServerFeatures(unittest.TestCase):
             "summary": "s3",
         }
 
+        previous_key = os.environ.get("GROQ_API_KEY")
         os.environ["GROQ_API_KEY"] = "test"
-        response = client.post("/api/analyze/multi-model", json={"symbol": "RELIANCE"})
+        try:
+            response = client.post("/api/analyze/multi-model", json={"symbol": "RELIANCE"})
+        finally:
+            if previous_key is None:
+                os.environ.pop("GROQ_API_KEY", None)
+            else:
+                os.environ["GROQ_API_KEY"] = previous_key
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
