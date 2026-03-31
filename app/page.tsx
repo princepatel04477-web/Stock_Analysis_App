@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { fetchStocks, fetchAnalysis, fetchPrediction, AnalyzeResponse, Prediction } from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
@@ -771,6 +772,32 @@ export default function Home() {
       .catch(() => setError("Failed to load stock list. Is the backend running?"));
   }, []);
 
+  useEffect(() => {
+    const symbol = new URLSearchParams(window.location.search).get("symbol");
+    if (!symbol) return;
+
+    const runFromQuery = async () => {
+      const normalized = symbol.toUpperCase();
+      setLoading(true);
+      setError(null);
+      setPrediction(null);
+      try {
+        const data = await fetchAnalysis(normalized);
+        setResult(data);
+        fetchPrediction(normalized)
+          .then((res) => setPrediction(res.prediction))
+          .catch(() => {});
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Analysis failed";
+        setError(`Failed to analyze ${normalized}: ${msg}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void runFromQuery();
+  }, []);
+
   const handleAnalyze = async (symbol: string) => {
     setLoading(true);
     setError(null);
@@ -812,8 +839,19 @@ export default function Home() {
         }}
       >
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 0 }}>
           <span style={{ fontSize: 20, fontWeight: 800 }}>⚡ NiftyPulse</span>
+          <Link
+            href="/screener"
+            style={{
+              fontSize: 13,
+              color: "#9ca3af",
+              textDecoration: "none",
+              fontWeight: 600,
+            }}
+          >
+            Screener
+          </Link>
           <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
             Powered by Groq + Perplexity
           </span>

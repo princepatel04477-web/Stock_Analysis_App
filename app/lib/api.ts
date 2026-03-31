@@ -123,6 +123,32 @@ export interface IndicesData {
   breadth: MarketBreadth;
 }
 
+export interface ScreenerFilters {
+  rsi_min: number;
+  rsi_max: number;
+  price_min: number;
+  price_max: number;
+  change_min: number;
+  change_max: number;
+  signal: "ALL" | "BUY" | "SELL" | "HOLD";
+  above_sma20: boolean;
+  above_sma50: boolean;
+  sector: string;
+}
+
+export interface ScreenerRow {
+  symbol: string;
+  sector: string;
+  price: number;
+  change_percent: number;
+  rsi_14: number;
+  sma_20: number;
+  sma_50: number;
+  above_sma20: boolean;
+  above_sma50: boolean;
+  signal: "BUY" | "SELL" | "HOLD";
+}
+
 // Fetch all stocks for search bar (called once on load)
 export async function fetchStocks(): Promise<string[]> {
   const res = await fetch(`${BASE_URL}/api/stocks`, { cache: "no-store" });
@@ -205,4 +231,15 @@ export async function fetchIndicesData(): Promise<IndicesData | null> {
   } catch {
     return null;
   }
+}
+
+export async function fetchScreener(filters: ScreenerFilters): Promise<ScreenerRow[]> {
+  const res = await fetch(`${BASE_URL}/api/screener`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filters),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("Screener request failed");
+  return res.json();
 }

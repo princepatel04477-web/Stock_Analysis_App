@@ -81,6 +81,31 @@ SECTORS = {
     "Consumer": ["TITAN", "ASIANPAINT"],
 }
 
+SCREENER_STOCKS = [
+    "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
+    "HINDUNILVR", "ITC", "SBIN", "BAJFINANCE", "BHARTIARTL",
+    "WIPRO", "TATAMOTORS", "MARUTI", "SUNPHARMA", "AXISBANK",
+    "LT", "NESTLEIND", "POWERGRID", "NTPC", "ONGC",
+    "COALINDIA", "TITAN", "HCLTECH", "ASIANPAINT", "TATASTEEL",
+    "JSWSTEEL", "DRREDDY", "CIPLA", "DIVISLAB", "EICHERMOT",
+    "HEROMOTOCO", "BPCL", "BRITANNIA", "TECHM", "ADANIPORTS",
+    "HINDALCO", "VEDL", "BAJAJ-AUTO", "ULTRACEMCO", "GRASIM",
+]
+
+SECTOR_MAP = {
+    "RELIANCE": "Energy", "ONGC": "Energy", "BPCL": "Energy", "NTPC": "Energy",
+    "TCS": "IT", "INFY": "IT", "WIPRO": "IT", "HCLTECH": "IT", "TECHM": "IT",
+    "HDFCBANK": "Banking", "ICICIBANK": "Banking", "SBIN": "Banking", "AXISBANK": "Banking",
+    "TATAMOTORS": "Auto", "MARUTI": "Auto", "BAJAJ-AUTO": "Auto", "HEROMOTOCO": "Auto",
+    "HINDUNILVR": "FMCG", "ITC": "FMCG", "NESTLEIND": "FMCG", "BRITANNIA": "FMCG",
+    "SUNPHARMA": "Pharma", "DRREDDY": "Pharma", "CIPLA": "Pharma", "DIVISLAB": "Pharma",
+    "TATASTEEL": "Metals", "JSWSTEEL": "Metals", "HINDALCO": "Metals", "VEDL": "Metals",
+    "TITAN": "Consumer", "ASIANPAINT": "Consumer",
+    "LT": "Infra", "ADANIPORTS": "Infra", "ULTRACEMCO": "Infra", "GRASIM": "Infra",
+    "BAJFINANCE": "Finance", "COALINDIA": "Energy", "POWERGRID": "Energy",
+    "EICHERMOT": "Auto",
+}
+
 
 # ---------------------------------------------------------------------------
 # Data fetching helpers
@@ -243,6 +268,82 @@ def _do_fetch_indices() -> dict:
         "breadth": {"advances": advances, "declines": declines, "unchanged": unchanged},
     }
 
+
+def run_screener(filters: dict) -> list[dict]:
+    results = []
+    for symbol in SCREENER_STOCKS:
+        try:
+            data = fetch_market_data(symbol)
+            if "error" in data:
+                continue
+
+            rsi = data.get("rsi_14", 50)
+            price = data.get("current_price", 0)
+            change = data.get("change_percent", 0)
+            sma20 = data.get("sma_20", 0)
+            sma50 = data.get("sma_50", 0)
+            sector = SECTOR_MAP.get(symbol, "Other")
+
+            rsi_min = filters.get("rsi_min")
+            rsi_max = filters.get("rsi_max")
+            price_min = filters.get("price_min")
+            price_max = filters.get("price_max")
+            change_min = filters.get("change_min")
+            change_max = filters.get("change_max")
+            signal_filter = filters.get("signal")
+            above_sma20_filter = filters.get("above_sma20")
+            above_sma50_filter = filters.get("above_sma50")
+            sector_filter = filters.get("sector")
+
+            if rsi_min is not None and rsi < rsi_min:
+                continue
+            if rsi_max is not None and rsi > rsi_max:
+                continue
+            if price_min is not None and price < price_min:
+                continue
+            if price_max is not None and price > price_max:
+                continue
+            if change_min is not None and change < change_min:
+                continue
+            if change_max is not None and change > change_max:
+                continue
+            if above_sma20_filter and price <= sma20:
+                continue
+            if above_sma50_filter and price <= sma50:
+                continue
+            if sector_filter and sector_filter != "All" and sector != sector_filter:
+                continue
+
+            simple_signal = "HOLD"
+            if rsi < 35 and price > sma20:
+                simple_signal = "BUY"
+            elif rsi > 65 and price < sma20:
+                simple_signal = "SELL"
+            elif price > sma20 and price > sma50:
+                simple_signal = "BUY"
+            elif price < sma20 and price < sma50:
+                simple_signal = "SELL"
+
+            if signal_filter and signal_filter != "ALL" and simple_signal != signal_filter:
+                continue
+
+            results.append({
+                "symbol": symbol,
+                "sector": sector,
+                "price": round(price, 2),
+                "change_percent": round(change, 2),
+                "rsi_14": round(rsi, 1),
+                "sma_20": round(sma20, 2),
+                "sma_50": round(sma50, 2),
+                "above_sma20": price > sma20,
+                "above_sma50": price > sma50,
+                "signal": simple_signal,
+            })
+        except Exception:
+            continue
+
+    return sorted(results, key=lambda x: x["rsi_14"])
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -335,6 +436,11 @@ def get_stocks():
         return stocks
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/screener")
+def screener(filters: dict):
+    return run_screener(filters)
 
 
 @app.get("/api/analyze/{symbol}")
