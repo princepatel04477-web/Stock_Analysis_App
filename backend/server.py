@@ -432,6 +432,85 @@ def history(symbol: str, limit: int = 10):
         return []
 
 
+@app.post("/api/alerts/create")
+def create_alert(alert: dict):
+    from backend.database import get_client
+    client = get_client()
+    client.table("price_alerts").insert({
+        "user_id": alert.get("user_id"),
+        "symbol": alert.get("symbol"),
+        "company_name": alert.get("company_name"),
+        "alert_type": alert.get("alert_type"),
+        "target_price": alert.get("target_price"),
+        "condition": alert.get("condition"),
+    }).execute()
+    return {"success": True}
+
+
+@app.get("/api/alerts/{user_id}")
+def get_alerts(user_id: str):
+    from backend.database import get_client
+    client = get_client()
+    res = client.table("price_alerts") \
+        .select("*") \
+        .eq("user_id", user_id) \
+        .order("created_at", desc=True) \
+        .execute()
+    return res.data
+
+
+@app.delete("/api/alerts/{alert_id}")
+def delete_alert(alert_id: str):
+    from backend.database import get_client
+    client = get_client()
+    client.table("price_alerts") \
+        .delete() \
+        .eq("id", alert_id) \
+        .execute()
+    return {"success": True}
+
+
+@app.get("/api/alerts/check/{user_id}")
+def check_alerts(user_id: str):
+    from backend.database import get_client
+    from backend.price_service import fetch_market_data
+    from datetime import datetime, timezone
+    client = get_client()
+
+    alerts = client.table("price_alerts") \
+        .select("*") \
+        .eq("user_id", user_id) \
+        .eq("is_triggered", False) \
+        .execute().data
+
+    triggered = []
+    for alert in alerts:
+        data = fetch_market_data(alert["symbol"])
+        if "error" in data:
+            continue
+        current = data["current_price"]
+        hit = False
+        if alert["condition"] == "above" and current >= alert["target_price"]:
+            hit = True
+        elif alert["condition"] == "below" and current <= alert["target_price"]:
+            hit = True
+
+        if hit:
+            client.table("price_alerts") \
+                .update({
+                    "is_triggered": True,
+                    "triggered_at": datetime.now(timezone.utc).isoformat()
+                }) \
+                .eq("id", alert["id"]) \
+                .execute()
+            triggered.append({
+                **alert,
+                "current_price": current
+            })
+
+    return {"triggered": triggered}
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}

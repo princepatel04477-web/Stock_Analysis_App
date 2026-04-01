@@ -123,6 +123,19 @@ export interface IndicesData {
   breadth: MarketBreadth;
 }
 
+export interface PriceAlert {
+  id: string;
+  user_id: string;
+  symbol: string;
+  company_name?: string;
+  alert_type: string;
+  target_price: number;
+  condition: "above" | "below";
+  is_triggered: boolean;
+  triggered_at?: string | null;
+  created_at?: string;
+}
+
 // Fetch all stocks for search bar (called once on load)
 export async function fetchStocks(): Promise<string[]> {
   const res = await fetch(`${BASE_URL}/api/stocks`, { cache: "no-store" });
@@ -205,4 +218,37 @@ export async function fetchIndicesData(): Promise<IndicesData | null> {
   } catch {
     return null;
   }
+}
+
+export async function createPriceAlert(alert: {
+  user_id: string;
+  symbol: string;
+  company_name?: string;
+  alert_type: string;
+  target_price: number;
+  condition: "above" | "below";
+}): Promise<boolean> {
+  const res = await fetch(`${BASE_URL}/api/alerts/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(alert),
+  });
+  return res.ok;
+}
+
+export async function fetchPriceAlerts(userId: string): Promise<PriceAlert[]> {
+  const res = await fetch(`${BASE_URL}/api/alerts/${userId}`, { cache: "no-store" });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function removePriceAlert(alertId: string): Promise<boolean> {
+  const res = await fetch(`${BASE_URL}/api/alerts/${alertId}`, { method: "DELETE" });
+  return res.ok;
+}
+
+export async function checkPriceAlerts(userId: string): Promise<{ triggered: PriceAlert[] }> {
+  const res = await fetch(`${BASE_URL}/api/alerts/check/${userId}`, { cache: "no-store" });
+  if (!res.ok) return { triggered: [] };
+  return res.json();
 }

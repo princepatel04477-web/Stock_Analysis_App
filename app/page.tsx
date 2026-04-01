@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { fetchStocks, fetchAnalysis, fetchPrediction, AnalyzeResponse, Prediction } from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
@@ -759,11 +760,13 @@ function Footer() {
 // Root page
 // ──────────────────────────────────────────────
 export default function Home() {
+  const router = useRouter();
   const [stocks, setStocks] = useState<string[]>([]);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     fetchStocks()
@@ -822,23 +825,78 @@ export default function Home() {
         {/* Center: NavbarSearch (hidden on mobile via CSS) */}
         <NavbarSearch stocks={stocks} loading={loading} onAnalyze={handleAnalyze} />
 
-        {/* Right: CTA button */}
-        <button
-          onClick={scrollToAnalyze}
-          style={{
-            background: "#39FF14",
-            color: "#000",
-            border: "none",
-            borderRadius: 6,
-            padding: "6px 16px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          Analyze Stock →
-        </button>
+        {/* Right: navbar dropdown */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            style={{
+              background: "#39FF14",
+              color: "#000",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 14px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Menu ▾
+          </button>
+          {menuOpen && (
+            <div
+              style={{
+                position: "absolute",
+                top: "calc(100% + 8px)",
+                right: 0,
+                width: 180,
+                background: "#111111",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 10,
+                overflow: "hidden",
+                boxShadow: "0 16px 40px rgba(0,0,0,0.5)",
+                zIndex: 1000,
+              }}
+            >
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  scrollToAnalyze();
+                }}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  color: "#fff",
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                Analyze Stock
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/alerts");
+                }}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  color: "#fff",
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                Alerts
+              </button>
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* Change 4: Market breadth bar (sticky below navbar) */}
