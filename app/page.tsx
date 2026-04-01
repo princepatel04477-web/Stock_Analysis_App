@@ -1,7 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { fetchStocks, fetchAnalysis, fetchPrediction, AnalyzeResponse, Prediction } from "@/lib/api";
+import {
+  fetchStocks,
+  fetchAnalysis,
+  fetchPrediction,
+  fetchMarketSummary,
+  AnalyzeResponse,
+  Prediction,
+  MarketSummaryData,
+} from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
 import TechnicalSnapshot from "@/components/TechnicalSnapshot";
@@ -368,6 +376,157 @@ function StatsSection() {
         ))}
       </div>
     </div>
+  );
+}
+
+function MarketPulseCard() {
+  const [data, setData] = useState<MarketSummaryData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<string>("");
+
+  const loadSummary = async () => {
+    setLoading(true);
+    const summary = await fetchMarketSummary();
+    setData(summary);
+    setUpdatedAt(new Date().toLocaleTimeString());
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadSummary().catch(() => setLoading(false));
+  }, []);
+
+  const outlookColor =
+    data?.outlook === "Bullish" ? "#39FF14" : data?.outlook === "Bearish" ? "#F85149" : "#f59e0b";
+  const outlookIcon = data?.outlook === "Bullish" ? "📈" : data?.outlook === "Bearish" ? "📉" : "➡️";
+  const riskBg =
+    data?.risk_level === "Low"
+      ? "rgba(57,255,20,0.1)"
+      : data?.risk_level === "High"
+        ? "rgba(248,81,73,0.1)"
+        : "rgba(245,158,11,0.1)";
+  const riskBorder =
+    data?.risk_level === "Low"
+      ? "1px solid rgba(57,255,20,0.2)"
+      : data?.risk_level === "High"
+        ? "1px solid rgba(248,81,73,0.2)"
+        : "1px solid rgba(245,158,11,0.2)";
+  const riskColor = data?.risk_level === "Low" ? "#39FF14" : data?.risk_level === "High" ? "#F85149" : "#f59e0b";
+
+  return (
+    <section style={{ padding: "28px 24px 0", maxWidth: 1280, margin: "0 auto" }}>
+      <div
+        style={{
+          background: "#111111",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 12,
+          padding: 24,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>Today&apos;s Market Pulse</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ color: "#6b7280", fontSize: 12 }}>Updated {updatedAt || "—"}</span>
+            <button
+              onClick={loadSummary}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 8,
+                color: "#e5e7eb",
+                fontSize: 12,
+                padding: "6px 10px",
+                cursor: "pointer",
+              }}
+            >
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {loading || !data ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+            {[0, 1, 2].map((n) => (
+              <div key={n} style={{ height: 130, background: "rgba(255,255,255,0.03)", borderRadius: 10 }} />
+            ))}
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 44, filter: `drop-shadow(0 0 12px ${outlookColor})` }}>{outlookIcon}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: outlookColor }}>{data.outlook}</div>
+                <p style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6, marginTop: 8, marginBottom: 0 }}>{data.summary}</p>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                  Watch Today
+                </div>
+                {data.watch_list.slice(0, 3).map((item, idx) => (
+                  <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#39FF14", display: "inline-block" }} />
+                    <span style={{ fontSize: 13, color: "#e5e7eb" }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                  Market Risk
+                </div>
+                <div
+                  style={{
+                    background: riskBg,
+                    border: riskBorder,
+                    color: riskColor,
+                    borderRadius: 10,
+                    padding: "14px 18px",
+                    textAlign: "center",
+                    fontSize: 20,
+                    fontWeight: 800,
+                    width: "fit-content",
+                  }}
+                >
+                  {data.risk_level}
+                </div>
+                <p style={{ marginTop: 10, marginBottom: 0, fontSize: 12, color: "#6b7280" }}>{data.risk_reason}</p>
+              </div>
+            </div>
+            <div
+              style={{
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                paddingTop: 16,
+                marginTop: 16,
+                display: "flex",
+                gap: 32,
+              }}
+            >
+              {[
+                { label: "NIFTY 50", price: data.nifty.price, change: data.nifty.change },
+                { label: "SENSEX", price: data.sensex.price, change: data.sensex.change },
+              ].map((idx) => (
+                <div key={idx.label}>
+                  <div style={{ fontSize: 11, color: "#6b7280" }}>{idx.label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>₹{idx.price.toFixed(2)}</div>
+                  <span
+                    style={{
+                      background: idx.change >= 0 ? "rgba(57,255,20,0.15)" : "rgba(248,81,73,0.15)",
+                      color: idx.change >= 0 ? "#39FF14" : "#F85149",
+                      padding: "2px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {idx.change >= 0 ? "+" : ""}
+                    {idx.change.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1026,6 +1185,25 @@ export default function Home() {
               >
                 Portfolio
               </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/learn");
+                }}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  color: "#fff",
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                Learn
+              </button>
             </div>
           )}
         </div>
@@ -1054,6 +1232,7 @@ export default function Home() {
 
       {/* Stats */}
       <StatsSection />
+      <MarketPulseCard />
 
       {/* Change 2: Market Movers (between stats and how-it-works) */}
       <MarketMovers />

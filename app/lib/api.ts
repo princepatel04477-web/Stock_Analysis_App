@@ -142,6 +142,18 @@ export interface IndicesData {
   breadth: MarketBreadth;
 }
 
+export interface MarketSummaryData {
+  nifty: { price: number; change: number };
+  sensex: { price: number; change: number };
+  india_vix: number;
+  date: string;
+  outlook: "Bullish" | "Bearish" | "Neutral";
+  summary: string;
+  watch_list: string[];
+  risk_level: "Low" | "Medium" | "High";
+  risk_reason: string;
+}
+
 export interface PriceAlert {
   id: string;
   user_id: string;
@@ -266,6 +278,16 @@ export async function fetchSectorHeatmap(): Promise<SectorData[]> {
 export async function fetchIndicesData(): Promise<IndicesData | null> {
   try {
     const res = await fetch(`${BASE_URL}/api/market/indices`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchMarketSummary(): Promise<MarketSummaryData | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/market/summary`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch {

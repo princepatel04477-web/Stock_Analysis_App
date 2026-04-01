@@ -1,10 +1,13 @@
 import os
 import time
 import logging
+import json
+import re
 from datetime import datetime, timezone
 from typing import Literal
 import yfinance as yf
 import pandas as pd
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -254,6 +257,107 @@ def _do_fetch_indices() -> dict:
         "breadth": {"advances": advances, "declines": declines, "unchanged": unchanged},
     }
 
+
+def generate_market_summary():
+    try:
+        nifty = yf.Ticker("^NSEI")
+        info = nifty.fast_info
+        nifty_price = float(info.last_price)
+        nifty_prev = float(info.previous_close)
+        nifty_change = ((nifty_price - nifty_prev) / nifty_prev) * 100
+
+        sensex = yf.Ticker("^BSESN")
+        s_info = sensex.fast_info
+        sensex_price = float(s_info.last_price)
+        sensex_prev = float(s_info.previous_close)
+        sensex_change = ((sensex_price - sensex_prev) / sensex_prev) * 100
+
+        vix = yf.Ticker("^INDIAVIX")
+        vix_val = float(vix.fast_info.last_price)
+    except Exception:
+        nifty_price = 0.0
+        nifty_change = 0.0
+        sensex_price = 0.0
+        sensex_change = 0.0
+        vix_val = 0.0
+
+    prompt_data = {
+        "nifty": {"price": nifty_price, "change": nifty_change},
+        "sensex": {"price": sensex_price, "change": sensex_change},
+        "india_vix": vix_val,
+        "date": str(datetime.now().date())
+    }
+
+    risk_level = "Low" if vix_val < 15 else "Medium" if vix_val < 20 else "High"
+    default_outlook = "Bullish" if nifty_change > 0.4 else "Bearish" if nifty_change < -0.4 else "Neutral"
+    fallback = {
+        "outlook": default_outlook,
+        "summary": (
+            f"Nifty 50 is at {nifty_price:.2f} ({nifty_change:+.2f}%) and Sensex is at "
+            f"{sensex_price:.2f} ({sensex_change:+.2f}%). India VIX at {vix_val:.2f} suggests "
+            "investors should stay selective and watch intraday volatility."
+        ),
+        "watch_list": [
+            "Opening trend in Nifty 50 and Sensex",
+            "Sector rotation in banking, IT and energy",
+            "India VIX movement through the session",
+        ],
+        "risk_level": risk_level,
+        "risk_reason": f"India VIX at {vix_val:.2f} indicates {risk_level.lower()} market risk.",
+    }
+
+    groq_key = os.getenv("GROQ_API_KEY")
+    if not groq_key:
+        return {**prompt_data, **fallback}
+
+    summary_prompt = f"""
+    Based on this Indian market data:
+    Nifty 50: {nifty_price} ({nifty_change:+.2f}%)
+    Sensex: {sensex_price} ({sensex_change:+.2f}%)
+    India VIX: {vix_val}
+
+    Generate a concise daily market summary with:
+    1. Market outlook (Bullish/Bearish/Neutral)
+    2. Key observation in 2 sentences
+    3. Top 3 things to watch today
+    4. Risk level (Low/Medium/High) based on VIX
+
+    Return ONLY JSON:
+    {{
+      "outlook": "Bullish|Bearish|Neutral",
+      "summary": "2 sentence market summary",
+      "watch_list": ["point 1", "point 2", "point 3"],
+      "risk_level": "Low|Medium|High",
+      "risk_reason": "one sentence"
+    }}
+    """
+
+    headers = {
+        "Authorization": f"Bearer {groq_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "user", "content": summary_prompt}
+        ],
+        "temperature": 0.3,
+        "max_tokens": 400
+    }
+    try:
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=15
+        )
+        content = resp.json()["choices"][0]["message"]["content"]
+        content = re.sub(r"```json|```", "", content).strip()
+        ai_data = json.loads(content)
+        return {**prompt_data, **ai_data}
+    except Exception:
+        return {**prompt_data, **fallback}
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -289,6 +393,11 @@ def market_heatmap():
 def market_indices():
     """Return all index values + VIX + market breadth. Cached 2 minutes."""
     return get_cached("indices", 120, _do_fetch_indices)
+
+
+@app.get("/api/market/summary")
+def market_summary():
+    return get_cached("market_summary", 300, generate_market_summary)
 
 
 def generate_simple_analysis(ticker, market_data):
