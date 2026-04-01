@@ -77,9 +77,11 @@ class TestAlertEndpoints(unittest.TestCase):
         self.client = TestClient(app)
         self.table_state = []
 
+    @patch("backend.price_service.fetch_market_data")
     @patch("backend.database.get_client")
-    def test_create_and_get_and_delete_alert(self, mock_get_client):
+    def test_create_and_get_and_delete_alert(self, mock_get_client, mock_fetch_market_data):
         mock_get_client.return_value = _FakeClient(self.table_state)
+        mock_fetch_market_data.return_value = {"error": "skip in test"}
 
         create_res = self.client.post(
             "/api/alerts/create",

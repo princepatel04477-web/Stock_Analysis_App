@@ -23,6 +23,8 @@ const PRESETS = [
   { label: "SMA Crossover", condition: "above" as const, alert_type: "SMA Crossover" },
   { label: "5% Drop Alert", condition: "below" as const, alert_type: "5% Drop Alert" },
 ];
+const ALERT_CHECK_INTERVAL_MS = 300000; // 5 minutes
+const TOAST_DISPLAY_DURATION_MS = 5000;
 
 function getUserId(): string {
   if (typeof window === "undefined") return "";
@@ -99,7 +101,7 @@ export default function AlertsPage() {
           loadAlerts(userId);
         }
       }).catch(() => {});
-    }, 300000);
+    }, ALERT_CHECK_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [userId]);
 
@@ -141,7 +143,7 @@ export default function AlertsPage() {
 
   useEffect(() => {
     if (toasts.length === 0) return;
-    const id = setTimeout(() => setToasts((prev) => prev.slice(0, -1)), 5000);
+    const id = setTimeout(() => setToasts((prev) => prev.slice(0, -1)), TOAST_DISPLAY_DURATION_MS);
     return () => clearTimeout(id);
   }, [toasts]);
 
@@ -286,10 +288,33 @@ export default function AlertsPage() {
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              {(() => {
+                const currentPrice = alert.current_price;
+                const hasCurrentPrice = typeof currentPrice === "number";
+                const targetPrice = Number(alert.target_price);
+                const hasValidTargetPrice = Number.isFinite(targetPrice) && targetPrice > 0;
+                const canCalculateDistance = hasCurrentPrice && hasValidTargetPrice;
+                const distance = canCalculateDistance
+                  ? Math.abs((((currentPrice as number) - targetPrice) / (currentPrice as number)) * 100)
+                  : null;
+                const near = distance !== null && distance <= 3;
+                return (
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 13, color: "#9ca3af" }}>₹—</div>
-                <div style={{ fontSize: 12, color: "#6b7280" }}>— away</div>
+                <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                  ₹{hasCurrentPrice
+                    ? (currentPrice as number).toFixed(2)
+                    : "—"}
+                </div>
+                {distance !== null ? (
+                  <div style={{ fontSize: 12, color: near ? "#39FF14" : "#6b7280" }}>
+                    {distance.toFixed(2)}% away
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>— away</div>
+                )}
               </div>
+                );
+              })()}
               <button
                 onClick={async () => {
                   await removePriceAlert(alert.id);

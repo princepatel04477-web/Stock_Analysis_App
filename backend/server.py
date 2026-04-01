@@ -1,9 +1,12 @@
 import os
 import time
+import logging
+from typing import Literal
 import yfinance as yf
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,6 +18,7 @@ from backend.utils_groq import analyze_stock_groq
 from backend.ml_service import predict_signal
 
 app = FastAPI(title="NiftyPulse API")
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # In-memory cache utility
@@ -432,17 +436,26 @@ def history(symbol: str, limit: int = 10):
         return []
 
 
+class CreateAlertRequest(BaseModel):
+    user_id: str
+    symbol: str
+    company_name: str | None = None
+    alert_type: str
+    target_price: float = Field(gt=0)
+    condition: Literal["above", "below"]
+
+
 @app.post("/api/alerts/create")
-def create_alert(alert: dict):
+def create_alert(alert: CreateAlertRequest):
     from backend.database import get_client
     client = get_client()
     client.table("price_alerts").insert({
-        "user_id": alert.get("user_id"),
-        "symbol": alert.get("symbol"),
-        "company_name": alert.get("company_name"),
-        "alert_type": alert.get("alert_type"),
-        "target_price": alert.get("target_price"),
-        "condition": alert.get("condition"),
+        "user_id": alert.user_id,
+        "symbol": alert.symbol,
+        "company_name": alert.company_name,
+        "alert_type": alert.alert_type,
+        "target_price": alert.target_price,
+        "condition": alert.condition,
     }).execute()
     return {"success": True}
 
@@ -450,13 +463,24 @@ def create_alert(alert: dict):
 @app.get("/api/alerts/{user_id}")
 def get_alerts(user_id: str):
     from backend.database import get_client
+    from backend.price_service import fetch_market_data
     client = get_client()
     res = client.table("price_alerts") \
         .select("*") \
         .eq("user_id", user_id) \
         .order("created_at", desc=True) \
         .execute()
-    return res.data
+    alerts = res.data or []
+    enriched = []
+    for alert in alerts:
+        try:
+            market = fetch_market_data(alert["symbol"])
+            if "error" not in market:
+                alert["current_price"] = market.get("current_price")
+        except Exception:
+            pass
+        enriched.append(alert)
+    return enriched
 
 
 @app.delete("/api/alerts/{alert_id}")
@@ -487,8 +511,12 @@ def check_alerts(user_id: str):
     for alert in alerts:
         data = fetch_market_data(alert["symbol"])
         if "error" in data:
+            logger.warning("Alert check skipped for symbol=%s due to market data error", alert["symbol"])
             continue
-        current = data["current_price"]
+        try:
+            current = float(data["current_price"])
+        except (TypeError, ValueError, KeyError):
+            continue
         hit = False
         if alert["condition"] == "above" and current >= alert["target_price"]:
             hit = True
@@ -504,7 +532,9 @@ def check_alerts(user_id: str):
                 .eq("id", alert["id"]) \
                 .execute()
             triggered.append({
-                **alert,
+                "id": alert.get("id"),
+                "symbol": alert.get("symbol"),
+                "target_price": alert.get("target_price"),
                 "current_price": current
             })
 

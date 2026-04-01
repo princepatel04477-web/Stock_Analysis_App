@@ -134,6 +134,7 @@ export interface PriceAlert {
   is_triggered: boolean;
   triggered_at?: string | null;
   created_at?: string;
+  current_price?: number;
 }
 
 // Fetch all stocks for search bar (called once on load)
