@@ -1,0 +1,9 @@
+streamlit
+pandas
+ta
+vaderSentiment
+yfinance
+plotly
+newsapi-python
+python-dotenv
+supabase

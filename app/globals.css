@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0a0a0a;
+  color: #FAFAFA;
+}
+
+/* Marquee animations */
+@keyframes marquee-left {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes marquee-right {
+  0%   { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.marquee-left {
+  display: flex;
+  width: max-content;
+  animation: marquee-left 30s linear infinite;
+}
+.marquee-right {
+  display: flex;
+  width: max-content;
+  animation: marquee-right 25s linear infinite;
+}
+.marquee-left:hover,
+.marquee-right:hover {
+  animation-play-state: paused;
+}
+
+/* Float animation for hero card */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+.float-card {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Ticker item shared style */
+.ticker-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 4px 12px;
+  margin: 0 6px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* NavbarSearch skeleton pulse */
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+.nb-skeleton {
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  height: 40px;
+  animation: pulse 1.5s ease infinite;
+}
+
+/* Responsive: hide navbar search on < 768px, shrink on 768-1024px */
+@media (max-width: 767px) {
+  .nb-search-wrapper { display: none !important; }
+  .nb-mobile-search  { display: flex !important; }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+  .nb-search-wrapper { width: 240px !important; }
+  .nb-mobile-search  { display: none !important; }
+}
+@media (min-width: 1025px) {
+  .nb-mobile-search { display: none !important; }
+}
