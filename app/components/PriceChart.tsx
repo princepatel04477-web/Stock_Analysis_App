@@ -6,9 +6,11 @@ import { createChart, ColorType } from "lightweight-charts";
 interface Props {
   symbol: string;
   chartData: ChartCandle[];
+  supportLevels?: number[];
+  resistanceLevels?: number[];
 }
 
-export default function PriceChart({ symbol, chartData }: Props) {
+export default function PriceChart({ symbol, chartData, supportLevels = [], resistanceLevels = [] }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const macdRef = useRef<HTMLDivElement>(null);
   const [showSma20, setShowSma20] = useState(true);
@@ -63,6 +65,35 @@ export default function PriceChart({ symbol, chartData }: Props) {
         close: c.close,
       }))
     );
+
+    const firstTime = chartData[0]?.date as any;
+    const lastTime = chartData[chartData.length - 1]?.date as any;
+    if (firstTime && lastTime) {
+      supportLevels.forEach((level, idx) => {
+        const s = chart.addLineSeries({
+          color: "rgba(57,255,20,0.8)",
+          lineWidth: 1,
+          lineStyle: 2,
+          title: `S ${idx + 1} ₹${level.toFixed(2)}`,
+        });
+        s.setData([
+          { time: firstTime, value: level },
+          { time: lastTime, value: level },
+        ]);
+      });
+      resistanceLevels.forEach((level, idx) => {
+        const s = chart.addLineSeries({
+          color: "rgba(248,81,73,0.85)",
+          lineWidth: 1,
+          lineStyle: 2,
+          title: `R ${idx + 1} ₹${level.toFixed(2)}`,
+        });
+        s.setData([
+          { time: firstTime, value: level },
+          { time: lastTime, value: level },
+        ]);
+      });
+    }
 
     const sma20Data = chartData.filter((c) => c.sma_20 != null);
     if (showSma20 && sma20Data.length > 0) {
@@ -172,7 +203,7 @@ export default function PriceChart({ symbol, chartData }: Props) {
       window.removeEventListener("resize", handleResize);
       chart.remove();
     };
-  }, [chartData, showSma20, showSma50, showEma9, showEma21, showBollinger]);
+  }, [chartData, showSma20, showSma50, showEma9, showEma21, showBollinger, supportLevels, resistanceLevels]);
 
   useEffect(() => {
     if (!showMacd || !macdRef.current || !chartData?.length) return;

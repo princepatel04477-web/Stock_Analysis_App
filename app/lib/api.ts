@@ -48,6 +48,17 @@ export interface AnalyzeResponse {
   market_data: MarketData;
   analysis: Analysis;
   chart_data: ChartCandle[];
+  patterns: Array<{
+    date: string;
+    pattern: string;
+    type: "bullish" | "bearish" | "neutral";
+    description: string;
+  }>;
+  levels: {
+    support: number[];
+    resistance: number[];
+    current_price?: number;
+  };
   from_cache: boolean;
 }
 

@@ -545,7 +545,120 @@ function AnalysisSection({
               <SignalGauge analysis={result.analysis} />
             </div>
             {prediction && <MLSignalCard prediction={prediction} />}
-            <PriceChart symbol={result.symbol} chartData={result.chart_data} />
+            <PriceChart
+              symbol={result.symbol}
+              chartData={result.chart_data}
+              supportLevels={result.levels?.support || []}
+              resistanceLevels={result.levels?.resistance || []}
+            />
+            <div
+              style={{
+                background: "#111111",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                padding: 20,
+              }}
+            >
+              <h3 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px" }}>Detected Patterns</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {(result.patterns || []).map((p, idx) => {
+                  const isBull = p.type === "bullish";
+                  const isBear = p.type === "bearish";
+                  const bg = isBull
+                    ? "rgba(57,255,20,0.08)"
+                    : isBear
+                      ? "rgba(248,81,73,0.08)"
+                      : "rgba(245,158,11,0.08)";
+                  const border = isBull
+                    ? "1px solid rgba(57,255,20,0.2)"
+                    : isBear
+                      ? "1px solid rgba(248,81,73,0.2)"
+                      : "1px solid rgba(245,158,11,0.2)";
+                  const color = isBull ? "#39FF14" : isBear ? "#F85149" : "#f59e0b";
+                  const icon = isBull ? "↑" : isBear ? "↓" : "↔";
+                  return (
+                    <span
+                      key={`${p.date}-${p.pattern}-${idx}`}
+                      title={p.description}
+                      style={{
+                        borderRadius: 8,
+                        padding: "8px 14px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        background: bg,
+                        border,
+                        color,
+                      }}
+                    >
+                      {icon} {p.pattern} on {p.date}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div
+              style={{
+                background: "#111111",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 12,
+                padding: 20,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+              }}
+            >
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>Support Levels</h3>
+                {(result.levels?.support || []).map((level, idx) => {
+                  const current = result.levels?.current_price || result.market_data.current_price || 0;
+                  const distance = current > 0 ? ((current - level) / current) * 100 : 0;
+                  return (
+                    <div
+                      key={`s-${idx}-${level}`}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "10px 14px",
+                        background: "rgba(57,255,20,0.04)",
+                        border: "1px solid rgba(57,255,20,0.1)",
+                        borderRadius: 8,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, color: "#39FF14" }}>₹{Number(level).toFixed(2)}</span>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>{distance.toFixed(2)}% below</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 12px" }}>Resistance Levels</h3>
+                {(result.levels?.resistance || []).map((level, idx) => {
+                  const current = result.levels?.current_price || result.market_data.current_price || 0;
+                  const distance = current > 0 ? ((level - current) / current) * 100 : 0;
+                  return (
+                    <div
+                      key={`r-${idx}-${level}`}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        padding: "10px 14px",
+                        background: "rgba(248,81,73,0.04)",
+                        border: "1px solid rgba(248,81,73,0.1)",
+                        borderRadius: 8,
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span style={{ fontWeight: 700, color: "#F85149" }}>₹{Number(level).toFixed(2)}</span>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>{distance.toFixed(2)}% above</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <NewsCard marketData={result.market_data} />
             <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", fontSize: 12, paddingBottom: 8 }}>
               ⚠️ AI-generated analysis only. Not financial advice. Always verify with your broker.

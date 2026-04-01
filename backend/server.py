@@ -13,7 +13,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from backend.database import get_all_stocks, get_cached_analysis, save_analysis
-from backend.price_service import fetch_market_data, fetch_chart_data, fetch_stock_news
+from backend.price_service import (
+    fetch_market_data,
+    fetch_chart_data,
+    fetch_stock_news,
+    detect_patterns,
+    detect_support_resistance,
+)
 from backend.utils_perplexity import fetch_latest_data_perplexity
 from backend.utils_groq import analyze_stock_groq
 from backend.ml_service import predict_signal
@@ -394,6 +400,8 @@ def analyze(symbol: str):
         "market_data": market_data,
         "analysis": analysis,
         "chart_data": chart_data,
+        "patterns": detect_patterns(chart_data),
+        "levels": detect_support_resistance(chart_data),
         "from_cache": False,
     }
 

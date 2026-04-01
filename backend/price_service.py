@@ -141,6 +141,128 @@ def fetch_chart_data(symbol: str):
         return None
 
 
+def detect_patterns(candles):
+    patterns = []
+    if len(candles) < 5:
+        return patterns
+
+    for i in range(2, len(candles)):
+        c = candles[i]
+        prev = candles[i - 1]
+
+        body = abs(c["close"] - c["open"])
+        range_ = c["high"] - c["low"]
+        if range_ == 0:
+            continue
+        body_ratio = body / range_
+
+        if body_ratio < 0.1:
+            patterns.append({
+                "date": c["date"],
+                "pattern": "Doji",
+                "type": "neutral",
+                "description": "Indecision - possible reversal"
+            })
+
+        lower_shadow = min(c["open"], c["close"]) - c["low"]
+        upper_shadow = c["high"] - max(c["open"], c["close"])
+        if (
+            lower_shadow > 2 * body and
+            upper_shadow < body * 0.3 and
+            c["close"] > c["open"]
+        ):
+            patterns.append({
+                "date": c["date"],
+                "pattern": "Hammer",
+                "type": "bullish",
+                "description": "Bullish reversal signal"
+            })
+
+        if (
+            upper_shadow > 2 * body and
+            lower_shadow < body * 0.3 and
+            c["close"] < c["open"]
+        ):
+            patterns.append({
+                "date": c["date"],
+                "pattern": "Shooting Star",
+                "type": "bearish",
+                "description": "Bearish reversal signal"
+            })
+
+        if (
+            prev["close"] < prev["open"] and
+            c["close"] > c["open"] and
+            c["open"] < prev["close"] and
+            c["close"] > prev["open"]
+        ):
+            patterns.append({
+                "date": c["date"],
+                "pattern": "Bullish Engulfing",
+                "type": "bullish",
+                "description": "Strong bullish reversal"
+            })
+
+        if (
+            prev["close"] > prev["open"] and
+            c["close"] < c["open"] and
+            c["open"] > prev["close"] and
+            c["close"] < prev["open"]
+        ):
+            patterns.append({
+                "date": c["date"],
+                "pattern": "Bearish Engulfing",
+                "type": "bearish",
+                "description": "Strong bearish reversal"
+            })
+
+    return patterns[-10:]
+
+
+def detect_support_resistance(candles):
+    if len(candles) < 20:
+        return {"support": [], "resistance": []}
+
+    closes = [c["close"] for c in candles]
+    highs = [c["high"] for c in candles]
+    lows = [c["low"] for c in candles]
+
+    resistance_levels = []
+    support_levels = []
+    tolerance = 0.02
+
+    for i in range(2, len(candles) - 2):
+        if (
+            highs[i] > highs[i - 1] and
+            highs[i] > highs[i - 2] and
+            highs[i] > highs[i + 1] and
+            highs[i] > highs[i + 2]
+        ):
+            level = round(highs[i], 2)
+            if not any(abs(r - level) / level < tolerance for r in resistance_levels):
+                resistance_levels.append(level)
+
+        if (
+            lows[i] < lows[i - 1] and
+            lows[i] < lows[i - 2] and
+            lows[i] < lows[i + 1] and
+            lows[i] < lows[i + 2]
+        ):
+            level = round(lows[i], 2)
+            if not any(abs(s - level) / level < tolerance for s in support_levels):
+                support_levels.append(level)
+
+    current_price = closes[-1]
+    resistance_levels = sorted([r for r in resistance_levels if r > current_price])[:3]
+    support_levels = sorted([s for s in support_levels if s < current_price], reverse=True)[:3]
+
+    return {
+        "support": support_levels,
+        "resistance": resistance_levels,
+        "current_price": current_price
+    }
+
+
 def fetch_stock_news(symbol: str):
     try:
         ticker = symbol.upper().strip()
