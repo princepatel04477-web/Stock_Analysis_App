@@ -545,106 +545,131 @@ def check_alerts(user_id: str):
 def portfolio_buy(trade: dict):
     from backend.database import get_client
     from backend.price_service import fetch_market_data
-    client = get_client()
-    data = fetch_market_data(trade["symbol"])
-    price = trade.get("price") or data.get("current_price", 0)
-    client.table("virtual_portfolio").insert({
-        "user_id": trade["user_id"],
-        "symbol": trade["symbol"],
-        "company_name": trade.get("company_name", ""),
-        "quantity": trade["quantity"],
-        "buy_price": price,
-    }).execute()
-    return {"success": True, "buy_price": price}
+    try:
+        client = get_client()
+        data = fetch_market_data(trade["symbol"])
+        price = float(trade.get("price") or data.get("current_price", 0))
+        client.table("virtual_portfolio").insert({
+            "user_id": trade["user_id"],
+            "symbol": trade["symbol"],
+            "company_name": trade.get("company_name", ""),
+            "quantity": int(trade["quantity"]),
+            "buy_price": price,
+        }).execute()
+        return {"success": True, "buy_price": price}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to create portfolio trade")
 
 
 @app.post("/api/portfolio/sell/{trade_id}")
 def portfolio_sell(trade_id: str, data: dict):
     from backend.database import get_client
     from backend.price_service import fetch_market_data
-    client = get_client()
-    trade = client.table("virtual_portfolio") \
-        .select("*").eq("id", trade_id).execute().data[0]
-    market = fetch_market_data(trade["symbol"])
-    sell_price = data.get("price") or market.get("current_price", 0)
-    client.table("virtual_portfolio").update({
-        "is_open": False,
-        "sell_price": sell_price,
-        "sell_date": datetime.now(timezone.utc).isoformat()
-    }).eq("id", trade_id).execute()
-    pnl = (sell_price - trade["buy_price"]) * trade["quantity"]
-    return {"success": True, "sell_price": sell_price, "pnl": pnl}
+    try:
+        client = get_client()
+        trade_rows = client.table("virtual_portfolio") \
+            .select("*").eq("id", trade_id).execute().data
+        if not trade_rows:
+            raise HTTPException(status_code=404, detail="Trade not found")
+        trade = trade_rows[0]
+        market = fetch_market_data(trade["symbol"])
+        sell_price = float(data.get("price") or market.get("current_price", 0))
+        client.table("virtual_portfolio").update({
+            "is_open": False,
+            "sell_price": sell_price,
+            "sell_date": datetime.now(timezone.utc).isoformat()
+        }).eq("id", trade_id).execute()
+        pnl = (sell_price - float(trade["buy_price"])) * int(trade["quantity"])
+        return {"success": True, "sell_price": sell_price, "pnl": pnl}
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to close portfolio trade")
 
 
 @app.get("/api/portfolio/{user_id}")
 def get_portfolio(user_id: str):
     from backend.database import get_client
     from backend.price_service import fetch_market_data
-    client = get_client()
-    open_trades = client.table("virtual_portfolio") \
-        .select("*") \
-        .eq("user_id", user_id) \
-        .eq("is_open", True) \
-        .execute().data
-    closed_trades = client.table("virtual_portfolio") \
-        .select("*") \
-        .eq("user_id", user_id) \
-        .eq("is_open", False) \
-        .execute().data
+    try:
+        client = get_client()
+        open_trades = client.table("virtual_portfolio") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .eq("is_open", True) \
+            .execute().data
+        closed_trades = client.table("virtual_portfolio") \
+            .select("*") \
+            .eq("user_id", user_id) \
+            .eq("is_open", False) \
+            .execute().data
 
-    total_invested = 0
-    total_current = 0
-    enriched = []
-    enriched_closed = []
+        total_invested = 0
+        total_current = 0
+        enriched = []
+        enriched_closed = []
 
-    for t in open_trades:
-        data = fetch_market_data(t["symbol"])
-        current = data.get("current_price", t["buy_price"])
-        invested = t["buy_price"] * t["quantity"]
-        current_val = current * t["quantity"]
-        pnl = current_val - invested
-        pnl_pct = (pnl / invested) * 100 if invested > 0 else 0
+        for t in open_trades:
+            buy_price = float(t.get("buy_price") or 0)
+            quantity = int(t.get("quantity") or 0)
+            data = fetch_market_data(t["symbol"])
+            current = float(data.get("current_price", buy_price))
+            invested = buy_price * quantity
+            current_val = current * quantity
+            pnl = current_val - invested
+            pnl_pct = (pnl / invested) * 100 if invested > 0 else 0
 
-        total_invested += invested
-        total_current += current_val
+            total_invested += invested
+            total_current += current_val
 
-        enriched.append({
-            **t,
-            "current_price": current,
-            "invested": round(invested, 2),
-            "current_value": round(current_val, 2),
-            "pnl": round(pnl, 2),
-            "pnl_percent": round(pnl_pct, 2)
-        })
+            enriched.append({
+                **t,
+                "buy_price": buy_price,
+                "quantity": quantity,
+                "current_price": current,
+                "invested": round(invested, 2),
+                "current_value": round(current_val, 2),
+                "pnl": round(pnl, 2),
+                "pnl_percent": round(pnl_pct, 2)
+            })
 
-    for t in closed_trades:
-        invested = t["buy_price"] * t["quantity"]
-        sell_price = t.get("sell_price") or 0
-        sell_value = sell_price * t["quantity"]
-        pnl = sell_value - invested
-        pnl_pct = (pnl / invested) * 100 if invested > 0 else 0
-        enriched_closed.append({
-            **t,
-            "invested": round(invested, 2),
-            "final_value": round(sell_value, 2),
-            "pnl": round(pnl, 2),
-            "pnl_percent": round(pnl_pct, 2),
-        })
+        for t in closed_trades:
+            buy_price = float(t.get("buy_price") or 0)
+            quantity = int(t.get("quantity") or 0)
+            invested = buy_price * quantity
+            sell_price = float(t.get("sell_price") or 0)
+            sell_value = sell_price * quantity
+            pnl = sell_value - invested
+            pnl_pct = (pnl / invested) * 100 if invested > 0 else 0
+            enriched_closed.append({
+                **t,
+                "buy_price": buy_price,
+                "quantity": quantity,
+                "sell_price": sell_price,
+                "invested": round(invested, 2),
+                "final_value": round(sell_value, 2),
+                "pnl": round(pnl, 2),
+                "pnl_percent": round(pnl_pct, 2),
+            })
 
-    total_pnl = total_current - total_invested
-    return {
-        "trades": enriched,
-        "closed_trades": enriched_closed,
-        "summary": {
-            "total_invested": round(total_invested, 2),
-            "total_current": round(total_current, 2),
-            "total_pnl": round(total_pnl, 2),
-            "total_pnl_percent": round(
-                (total_pnl / total_invested * 100)
-                if total_invested > 0 else 0, 2
-            )
+        total_pnl = total_current - total_invested
+        return {
+            "trades": enriched,
+            "closed_trades": enriched_closed,
+            "summary": {
+                "total_invested": round(total_invested, 2),
+                "total_current": round(total_current, 2),
+                "total_pnl": round(total_pnl, 2),
+                "total_pnl_percent": round(
+                    (total_pnl / total_invested * 100)
+                    if total_invested > 0 else 0, 2
+                )
+            }
         }
-    }
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch portfolio")
 
 
 @app.get("/health")

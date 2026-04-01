@@ -169,7 +169,7 @@ export default function PortfolioPage() {
             <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 170, background: "#111", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
               <button onClick={() => router.push("/")} style={{ width: "100%", background: "transparent", border: "none", color: "#fff", textAlign: "left", padding: "10px 12px", cursor: "pointer" }}>Home</button>
               <button onClick={() => router.push("/alerts")} style={{ width: "100%", background: "transparent", border: "none", color: "#fff", textAlign: "left", padding: "10px 12px", cursor: "pointer", borderTop: "1px solid rgba(255,255,255,0.08)" }}>Alerts</button>
-              <button onClick={() => setMenuOpen(false)} style={{ width: "100%", background: "rgba(57,255,20,0.08)", border: "none", color: "#39FF14", textAlign: "left", padding: "10px 12px", cursor: "default", borderTop: "1px solid rgba(255,255,255,0.08)" }}>Portfolio</button>
+              <button disabled style={{ width: "100%", background: "rgba(57,255,20,0.08)", border: "none", color: "#39FF14", textAlign: "left", padding: "10px 12px", cursor: "default", borderTop: "1px solid rgba(255,255,255,0.08)" }}>Portfolio</button>
             </div>
           )}
         </div>
@@ -270,7 +270,6 @@ export default function PortfolioPage() {
                   <td style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>{fmtINR(Number(t.current_value || 0))}</td>
                   <td style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", color: Number(t.pnl || 0) >= 0 ? "#39FF14" : "#F85149" }}>
                     {`${Number(t.pnl || 0) >= 0 ? "+" : ""}${fmtINR(Number(t.pnl || 0))}`}
-                    <div style={{ fontSize: 11, opacity: 0.8 }}>{`${Number(t.pnl_percent || 0) >= 0 ? "+" : ""}${Number(t.pnl_percent || 0).toFixed(2)}%`}</div>
                   </td>
                   <td style={{ padding: "12px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)", color: Number(t.pnl_percent || 0) >= 0 ? "#39FF14" : "#F85149" }}>
                     {`${Number(t.pnl_percent || 0) >= 0 ? "+" : ""}${Number(t.pnl_percent || 0).toFixed(2)}%`}
