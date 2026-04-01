@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
-    "start": "next start -p 3000 -H 0.0.0.0"
+    "start": "next start -p 3000 -H 0.0.0.0",
+    "wrangler:dev": "wrangler dev",
+    "wrangler:deploy": "wrangler deploy",
+    "wrangler:tail": "wrangler tail"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.101.1",
@@ -25,6 +28,7 @@
     "eslint-config-next": "^16.2.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.79.0"
   }
 }
