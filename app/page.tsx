@@ -894,6 +894,25 @@ export default function Home() {
               >
                 Alerts
               </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push("/portfolio");
+                }}
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  color: "#fff",
+                  textAlign: "left",
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                Portfolio
+              </button>
             </div>
           )}
         </div>

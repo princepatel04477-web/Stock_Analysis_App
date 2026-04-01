@@ -145,6 +145,39 @@ export interface PriceAlert {
   current_price?: number;
 }
 
+export interface PortfolioTrade {
+  id: string;
+  user_id: string;
+  symbol: string;
+  company_name?: string;
+  quantity: number;
+  buy_price: number;
+  buy_date?: string;
+  is_open: boolean;
+  sell_price?: number | null;
+  sell_date?: string | null;
+  notes?: string | null;
+  current_price?: number;
+  invested?: number;
+  current_value?: number;
+  final_value?: number;
+  pnl?: number;
+  pnl_percent?: number;
+}
+
+export interface PortfolioSummary {
+  total_invested: number;
+  total_current: number;
+  total_pnl: number;
+  total_pnl_percent: number;
+}
+
+export interface PortfolioResponse {
+  trades: PortfolioTrade[];
+  closed_trades: PortfolioTrade[];
+  summary: PortfolioSummary;
+}
+
 // Fetch all stocks for search bar (called once on load)
 export async function fetchStocks(): Promise<string[]> {
   const res = await fetch(`${BASE_URL}/api/stocks`, { cache: "no-store" });
@@ -259,5 +292,43 @@ export async function removePriceAlert(alertId: string): Promise<boolean> {
 export async function checkPriceAlerts(userId: string): Promise<{ triggered: PriceAlert[] }> {
   const res = await fetch(`${BASE_URL}/api/alerts/check/${userId}`, { cache: "no-store" });
   if (!res.ok) return { triggered: [] };
+  return res.json();
+}
+
+export async function buyPortfolioTrade(payload: {
+  user_id: string;
+  symbol: string;
+  company_name?: string;
+  quantity: number;
+  price?: number;
+}): Promise<{ success: boolean; buy_price: number }> {
+  const res = await fetch(`${BASE_URL}/api/portfolio/buy`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to buy portfolio trade");
+  return res.json();
+}
+
+export async function sellPortfolioTrade(tradeId: string, payload?: { price?: number }): Promise<{ success: boolean; sell_price: number; pnl: number }> {
+  const res = await fetch(`${BASE_URL}/api/portfolio/sell/${tradeId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {}),
+  });
+  if (!res.ok) throw new Error("Failed to sell portfolio trade");
+  return res.json();
+}
+
+export async function fetchPortfolio(userId: string): Promise<PortfolioResponse> {
+  const res = await fetch(`${BASE_URL}/api/portfolio/${userId}`, { cache: "no-store" });
+  if (!res.ok) {
+    return {
+      trades: [],
+      closed_trades: [],
+      summary: { total_invested: 0, total_current: 0, total_pnl: 0, total_pnl_percent: 0 },
+    };
+  }
   return res.json();
 }
