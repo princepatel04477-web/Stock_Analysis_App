@@ -1,7 +1,8 @@
 import yfinance as yf
 import pandas as pd
 from ta.momentum import RSIIndicator
-from ta.trend import SMAIndicator
+from ta.trend import SMAIndicator, MACD, EMAIndicator
+from ta.volatility import BollingerBands
 import os
 
 
@@ -70,6 +71,49 @@ def fetch_chart_data(symbol: str):
         else:
             df["sma_50"] = None
 
+        if len(df) >= 9:
+            df["ema_9"] = EMAIndicator(
+                close=df["close"], window=9
+            ).ema_indicator()
+        else:
+            df["ema_9"] = None
+
+        if len(df) >= 21:
+            df["ema_21"] = EMAIndicator(
+                close=df["close"], window=21
+            ).ema_indicator()
+        else:
+            df["ema_21"] = None
+
+        if len(df) >= 26:
+            macd = MACD(
+                close=df["close"],
+                window_slow=26,
+                window_fast=12,
+                window_sign=9
+            )
+            df["macd"] = macd.macd()
+            df["macd_signal"] = macd.macd_signal()
+            df["macd_diff"] = macd.macd_diff()
+        else:
+            df["macd"] = None
+            df["macd_signal"] = None
+            df["macd_diff"] = None
+
+        if len(df) >= 20:
+            bb = BollingerBands(
+                close=df["close"], window=20, window_dev=2
+            )
+            df["bb_upper"] = bb.bollinger_hband()
+            df["bb_middle"] = bb.bollinger_mavg()
+            df["bb_lower"] = bb.bollinger_lband()
+            df["bb_width"] = bb.bollinger_wband()
+        else:
+            df["bb_upper"] = None
+            df["bb_middle"] = None
+            df["bb_lower"] = None
+            df["bb_width"] = None
+
         candles = []
         for _, row in df.iterrows():
             candles.append({
@@ -81,6 +125,14 @@ def fetch_chart_data(symbol: str):
                 "volume": int(row["volume"]) if pd.notna(row["volume"]) else 0,
                 "sma_20": float(row["sma_20"]) if pd.notna(row.get("sma_20")) else None,
                 "sma_50": float(row["sma_50"]) if pd.notna(row.get("sma_50")) else None,
+                "ema_9": float(row["ema_9"]) if pd.notna(row.get("ema_9")) else None,
+                "ema_21": float(row["ema_21"]) if pd.notna(row.get("ema_21")) else None,
+                "macd": float(row["macd"]) if pd.notna(row.get("macd")) else None,
+                "macd_signal": float(row["macd_signal"]) if pd.notna(row.get("macd_signal")) else None,
+                "macd_diff": float(row["macd_diff"]) if pd.notna(row.get("macd_diff")) else None,
+                "bb_upper": float(row["bb_upper"]) if pd.notna(row.get("bb_upper")) else None,
+                "bb_middle": float(row["bb_middle"]) if pd.notna(row.get("bb_middle")) else None,
+                "bb_lower": float(row["bb_lower"]) if pd.notna(row.get("bb_lower")) else None,
             })
 
         return candles

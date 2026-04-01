@@ -33,6 +33,14 @@ export interface ChartCandle {
   volume: number;
   sma_20: number | null;
   sma_50: number | null;
+  ema_9: number | null;
+  ema_21: number | null;
+  macd: number | null;
+  macd_signal: number | null;
+  macd_diff: number | null;
+  bb_upper: number | null;
+  bb_middle: number | null;
+  bb_lower: number | null;
 }
 
 export interface AnalyzeResponse {
