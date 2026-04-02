@@ -1,13 +1,8 @@
-name = "niftypulse1"
-compatibility_date = "2024-01-01"
-
-[build]
-command = "npm run build"
-
-[build.upload]
-format = "pages"
-
-[[build.upload.copies]]
-from = ".next/static"
-to = "/_next/static"
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "niftypulse1",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat"]
+}
 
