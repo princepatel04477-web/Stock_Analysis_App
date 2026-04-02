@@ -1,8 +1,14 @@
 "use client";
 import { useState, useMemo, useRef, useEffect, useCallback, KeyboardEvent } from "react";
 
+interface Stock {
+  symbol: string;
+  name: string;
+  price: number;
+}
+
 interface NavbarSearchProps {
-  stocks: string[];
+  stocks: Stock[];
   loading: boolean;
   onAnalyze: (symbol: string) => void;
 }
@@ -78,7 +84,7 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
     if (!query.trim()) return [];
     const q = query.toUpperCase();
     return stocks
-      .filter((s) => s.toUpperCase().includes(q))
+      .filter((s) => s.symbol.toUpperCase().includes(q) || s.name.toUpperCase().includes(q))
       .slice(0, MAX_RESULTS);
   }, [query, stocks]);
 
@@ -87,8 +93,8 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
   const showResults = focused && query.trim().length > 0;
   const dropdownOpen = isOpen && (showRecent || showResults);
 
-  // Items displayed in the dropdown
-  const displayItems: string[] = showResults ? filtered : (showRecent ? recent : []);
+  // Items displayed in the dropdown (mix of recent strings and Stock objects)
+  const displayItems: (string | Stock)[] = showResults ? filtered : (showRecent ? recent : []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -112,8 +118,10 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
   }, [highlighted]);
 
   const triggerAnalyze = useCallback(
-    (rawValue: string) => {
-      const symbol = rawValue.split(" - ")[0].trim().toUpperCase();
+    (item: string | Stock) => {
+      const symbol = typeof item === 'string' 
+        ? item.split(" - ")[0].trim().toUpperCase()
+        : item.symbol.toUpperCase();
       if (!symbol) return;
       setQuery(symbol);
       setIsOpen(false);
@@ -130,7 +138,7 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
     [onAnalyze],
   );
 
-  const handleSelect = (item: string) => {
+  const handleSelect = (item: string | Stock) => {
     triggerAnalyze(item);
   };
 
@@ -366,11 +374,13 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
             {displayItems.length > 0 && (
               <ul ref={listRef} style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 {displayItems.map((item, idx) => {
-                  const [sym, name] = item.split(" - ");
+                  const isRecent = typeof item === 'string';
+                  const sym = isRecent ? item.split(" - ")[0] : item.symbol;
+                  const name = isRecent ? item.split(" - ")[1] : item.name;
                   const isHighlighted = idx === highlighted;
                   return (
                     <li
-                      key={item}
+                      key={isRecent ? item : item.symbol}
                       className="nb-item"
                       onMouseDown={() => handleSelect(item)}
                       onMouseEnter={() => setHighlighted(idx)}
@@ -391,7 +401,7 @@ export default function NavbarSearch({ stocks, loading, onAnalyze }: NavbarSearc
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", overflow: "hidden" }}>
-                        {showRecent && (
+                        {isRecent && (
                           <span style={{ marginRight: 8, fontSize: 13 }}>🕐</span>
                         )}
                         <span

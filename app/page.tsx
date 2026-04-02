@@ -10,6 +10,7 @@ import {
   AnalyzeResponse,
   Prediction,
   MarketSummaryData,
+  Stock,
 } from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
@@ -1086,7 +1087,7 @@ function Footer() {
 export default function Home() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const [stocks, setStocks] = useState<string[]>([]);
+  const [stocks, setStocks] = useState<Stock[]>([]);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

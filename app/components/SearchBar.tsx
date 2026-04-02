@@ -1,31 +1,40 @@
 "use client";
 import { useState, useMemo } from "react";
 
+interface Stock {
+  symbol: string;
+  name: string;
+  price: number;
+}
+
 interface Props {
-  stocks: string[];
+  stocks: Stock[];
   onAnalyze: (symbol: string) => void;
   loading: boolean;
 }
 
 export default function SearchBar({ stocks, onAnalyze, loading }: Props) {
   const [query, setQuery]       = useState("");
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState<Stock | null>(null);
   const [open, setOpen]         = useState(false);
 
   const filtered = useMemo(() => {
     if (!query || query.length < 1) return stocks.slice(0, 50);
     const q = query.toUpperCase();
-    return stocks.filter((s) => s.toUpperCase().includes(q)).slice(0, 50);
+    return stocks.filter((s) => 
+      s.symbol.toUpperCase().includes(q) || 
+      s.name.toUpperCase().includes(q)
+    ).slice(0, 50);
   }, [query, stocks]);
 
-  const handleSelect = (stock: string) => {
+  const handleSelect = (stock: Stock) => {
     setSelected(stock);
-    setQuery(stock);
+    setQuery(stock.symbol);
     setOpen(false);
   };
 
   const handleAnalyze = () => {
-    const symbol = (selected || query).split(" - ")[0].trim();
+    const symbol = selected?.symbol || query.split(" - ")[0].trim();
     if (symbol) onAnalyze(symbol);
   };
 
@@ -36,7 +45,7 @@ export default function SearchBar({ stocks, onAnalyze, loading }: Props) {
         <input
           type="text"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setOpen(true); setSelected(""); }}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); setSelected(null); }}
           onFocus={() => setOpen(true)}
           placeholder="Search by symbol or company name..."
           className="w-full bg-[#161B22] border border-[#30363D] rounded-lg px-4 py-3 text-white placeholder-[#8B949E] focus:outline-none focus:border-[#58A6FF] transition-colors"
@@ -45,19 +54,16 @@ export default function SearchBar({ stocks, onAnalyze, loading }: Props) {
         {/* Dropdown */}
         {open && filtered.length > 0 && (
           <ul className="absolute z-50 w-full mt-1 bg-[#161B22] border border-[#30363D] rounded-lg max-h-64 overflow-y-auto shadow-xl">
-            {filtered.map((stock) => {
-              const [sym, name] = stock.split(" - ");
-              return (
-                <li
-                  key={stock}
-                  onMouseDown={() => handleSelect(stock)}
-                  className="px-4 py-2.5 hover:bg-[#1E2130] cursor-pointer flex justify-between items-center border-b border-[#30363D] last:border-0"
-                >
-                  <span className="font-mono font-bold text-[#58A6FF] text-sm">{sym}</span>
-                  <span className="text-[#8B949E] text-xs truncate ml-3 max-w-[200px]">{name}</span>
-                </li>
-              );
-            })}
+            {filtered.map((stock) => (
+              <li
+                key={stock.symbol}
+                onMouseDown={() => handleSelect(stock)}
+                className="px-4 py-2.5 hover:bg-[#1E2130] cursor-pointer flex justify-between items-center border-b border-[#30363D] last:border-0"
+              >
+                <span className="font-mono font-bold text-[#58A6FF] text-sm">{stock.symbol}</span>
+                <span className="text-[#8B949E] text-xs truncate ml-3 max-w-[200px]">{stock.name}</span>
+              </li>
+            ))}
           </ul>
         )}
       </div>

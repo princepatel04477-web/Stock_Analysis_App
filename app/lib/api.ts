@@ -274,8 +274,15 @@ export interface PortfolioResponse {
   summary: PortfolioSummary;
 }
 
+// Stock type for search bar
+export interface Stock {
+  symbol: string;
+  name: string;
+  price: number;
+}
+
 // Fetch all stocks for search bar (called once on load)
-export async function fetchStocks(): Promise<string[]> {
+export async function fetchStocks(): Promise<Stock[]> {
   const res = await fetch(`${BASE_URL}/api/stocks`, { cache: "no-store" });
   if (!res.ok) throw new Error("Failed to fetch stocks");
   return res.json();
