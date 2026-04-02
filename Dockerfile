@@ -22,5 +22,6 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Run the FastAPI app (use shell form to expand $PORT from Railway)
-CMD python -m uvicorn backend.server:app --host 0.0.0.0 --port ${PORT:-8000}
+# Run the FastAPI app (use sh -c to properly expand $PORT from Railway)
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["python -m uvicorn backend.server:app --host 0.0.0.0 --port ${PORT:-8000}"]
