@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "niftypulse1",
-  "pages_build_output_dir": "./dist",
+  "pages_build_output_dir": ".next",
   "compatibility_date": "2024-01-01",
   "compatibility_flags": ["nodejs_compat"]
 }
