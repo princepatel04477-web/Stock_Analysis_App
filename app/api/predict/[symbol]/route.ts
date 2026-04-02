@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   req: NextRequest,
-  context: { params: { symbol: string } }
+  context: { params: Promise<{ symbol: string }> }
 ) {
   try {
-    const { symbol } = context.params;
+    const params = await context.params;
+    const { symbol } = params;
 
     if (!symbol) {
       return NextResponse.json(

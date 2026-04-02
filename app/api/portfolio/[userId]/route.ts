@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // Mock portfolio storage (in production, use Supabase)
 const mockPortfolios: Record<string, any> = {};
 
-export async function GET(req: NextRequest, context: { params: { userId: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ userId: string }> }) {
   try {
-    const { userId } = context.params;
+    const params = await context.params;
+    const { userId } = params;
 
     if (!userId) {
       return NextResponse.json(
