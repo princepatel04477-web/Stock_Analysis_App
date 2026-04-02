@@ -1,0 +1,24 @@
+
+> niftypulse-frontend@0.1.0 build
+> next build
+
+Γû▓ Next.js 16.2.2 (Turbopack)
+- Environments: .env.local, .env
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 3.3s
+  Running TypeScript ...
+Failed to type check.
+
+./app/components/NavbarSearch.tsx:544:26
+Type error: Argument of type 'string | Stock' is not assignable to parameter of type 'string'.
+  Type 'Stock' is not assignable to type 'string'.
+
+  542 |         e.preventDefault();
+  543 |         if (highlighted >= 0 && displayItems[highlighted]) {
+> 544 |           triggerAnalyze(displayItems[highlighted]);
+      |                          ^
+  545 |         } else {
+  546 |           triggerAnalyze(query);
+  547 |         }
+Next.js build worker exited with code: 1 and signal: null

@@ -507,8 +507,10 @@ export function MobileNavbarSearch({ stocks, loading, onAnalyze }: NavbarSearchP
   }, [highlighted]);
 
   const triggerAnalyze = useCallback(
-    (rawValue: string) => {
-      const symbol = rawValue.split(" - ")[0].trim().toUpperCase();
+    (item: string | Stock) => {
+      const symbol = typeof item === 'string'
+        ? item.split(" - ")[0].trim().toUpperCase()
+        : item.symbol.toUpperCase();
       if (!symbol) return;
       setQuery(symbol);
       setIsOpen(false);
