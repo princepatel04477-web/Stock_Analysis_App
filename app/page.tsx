@@ -632,7 +632,7 @@ function AnalysisSection({
   selectedModel,
   setSelectedModel,
 }: {
-  stocks: string[];
+  stocks: Stock[];
   onAnalyze: (s: string) => void;
   loading: boolean;
   error: string | null;
