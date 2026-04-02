@@ -476,13 +476,16 @@ export function MobileNavbarSearch({ stocks, loading, onAnalyze }: NavbarSearchP
   const filtered = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toUpperCase();
-    return stocks.filter((s) => s.toUpperCase().includes(q)).slice(0, MAX_RESULTS);
+    return stocks.filter((s) =>
+      s.symbol.toUpperCase().includes(q) ||
+      s.name.toUpperCase().includes(q)
+    ).slice(0, MAX_RESULTS);
   }, [query, stocks]);
 
   const showRecent = focused && query.trim() === "" && recent.length > 0;
   const showResults = focused && query.trim().length > 0;
   const dropdownOpen = isOpen && (showRecent || showResults);
-  const displayItems: string[] = showResults ? filtered : (showRecent ? recent : []);
+  const displayItems: (string | Stock)[] = showResults ? filtered : (showRecent ? recent : []);
 
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
@@ -649,11 +652,13 @@ export function MobileNavbarSearch({ stocks, loading, onAnalyze }: NavbarSearchP
           {displayItems.length > 0 && (
             <ul ref={listRef} style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {displayItems.map((item, idx) => {
-                const [sym, name] = item.split(" - ");
+                const isRecent = typeof item === 'string';
+                const sym = isRecent ? item.split(" - ")[0] : item.symbol;
+                const name = isRecent ? item.split(" - ")[1] : item.name;
                 const isHL = idx === highlighted;
                 return (
                   <li
-                    key={item}
+                    key={isRecent ? item : item.symbol}
                     className="nb-item"
                     onMouseDown={() => triggerAnalyze(item)}
                     onMouseEnter={() => setHighlighted(idx)}
@@ -670,7 +675,7 @@ export function MobileNavbarSearch({ stocks, loading, onAnalyze }: NavbarSearchP
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", overflow: "hidden" }}>
-                      {showRecent && <span style={{ marginRight: 8, fontSize: 13 }}>🕐</span>}
+                      {isRecent && <span style={{ marginRight: 8, fontSize: 13 }}>🕐</span>}
                       <span
                         className="nb-sym"
                         style={{ fontSize: 14, fontWeight: 700, color: isHL ? "#39FF14" : "#ffffff", whiteSpace: "nowrap", transition: "color 0.15s" }}
