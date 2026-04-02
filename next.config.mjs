@@ -1,28 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async rewrites() {
-    // In development, rewrite to local backend
-    if (process.env.NODE_ENV === "development") {
-      return [
-        {
-          source: "/api/:path*",
-          destination: "http://localhost:8001/api/:path*",
-        },
-      ];
-    }
-    
-    // In production, if backend URL is set, rewrite to it
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return [
-        {
-          source: "/api/:path*",
-          destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
-        },
-      ];
-    }
-    
-    return [];
-  },
+  // No rewrites needed - API routes are handled directly by Next.js
+  // All /api/* requests are handled by app/api/* route files
 };
 
 export default nextConfig;
+
