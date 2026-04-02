@@ -10,14 +10,15 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip, setuptools, wheel
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# Upgrade pip with binary preference
+RUN pip install --no-cache-dir --upgrade "pip>=24.0" setuptools wheel
 
 # Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install with binary-only preference to avoid long compilation times
+RUN pip install --no-cache-dir --only-binary :all: -r requirements.txt || \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
