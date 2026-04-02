@@ -1,13 +1,13 @@
-name = "niftypulse-frontend"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
+name = "niftypulse1"
+compatibility_date = "2024-01-01"
 
-# Cloudflare Pages output directory
-pages_build_output_dir = ".vercel/output/static"
+[build]
+command = "npm run build"
 
-[env.production]
-vars = { ENVIRONMENT = "production" }
+[build.upload]
+format = "pages"
 
-[vars]
-# Add your environment variables here or in Cloudflare Dashboard
-# NEXT_PUBLIC_API_URL = "https://your-backend-api.com"
+[[build.upload.copies]]
+from = ".next/static"
+to = "/_next/static"
+
