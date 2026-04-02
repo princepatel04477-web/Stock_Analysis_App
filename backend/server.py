@@ -8,25 +8,25 @@ from typing import Literal
 import yfinance as yf
 import pandas as pd
 import requests
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from database import get_all_stocks, get_cached_analysis, save_analysis
-from price_service import (
+from backend.database import get_all_stocks, get_cached_analysis, save_analysis
+from backend.price_service import (
     fetch_market_data,
     fetch_chart_data,
     fetch_stock_news,
     detect_patterns,
     detect_support_resistance,
 )
-from utils_perplexity import fetch_latest_data_perplexity
-from utils_groq import analyze_stock_groq
-from ml_service import predict_signal
-from multimodal_service import (
+from backend.utils_perplexity import fetch_latest_data_perplexity
+from backend.utils_groq import analyze_stock_groq
+from backend.ml_service import predict_signal
+from backend.multimodal_service import (
     analyze_stock_with_llm,
     analyze_chart_with_vision,
     generate_candlestick_chart,
@@ -36,7 +36,7 @@ from multimodal_service import (
     DEFAULT_MODEL,
     DEFAULT_VISION_MODEL,
 )
-from auth_service import get_current_user, get_optional_user, verify_jwt_token, UserInfo
+from backend.auth_service import get_current_user, get_optional_user, verify_jwt_token, UserInfo
 
 app = FastAPI(title="NiftyPulse API")
 logger = logging.getLogger(__name__)
@@ -602,7 +602,7 @@ def predict(symbol: str, model: str = "svm", temperature: float = 0.7):
 @app.get("/api/history/{symbol}")
 def history(symbol: str, limit: int = 10):
     try:
-        from database import get_cached_analysis
+        from backend.database import get_cached_analysis
         cached = get_cached_analysis(symbol.upper())
         if cached:
             return [cached]
@@ -621,7 +621,7 @@ class CreateAlertRequest(BaseModel):
 
 @app.post("/api/alerts/create")
 def create_alert(alert: CreateAlertRequest, current_user: dict = Depends(get_current_user)):
-    from database import get_client
+    from backend.database import get_client
     client = get_client()
     client.table("price_alerts").insert({
         "user_id": current_user["user_id"],  # Get user_id from JWT token
@@ -636,8 +636,8 @@ def create_alert(alert: CreateAlertRequest, current_user: dict = Depends(get_cur
 
 @app.get("/api/alerts")
 def get_alerts(current_user: dict = Depends(get_current_user)):
-    from database import get_client
-    from price_service import fetch_market_data
+    from backend.database import get_client
+    from backend.price_service import fetch_market_data
     client = get_client()
     res = client.table("price_alerts") \
         .select("*") \
@@ -659,7 +659,7 @@ def get_alerts(current_user: dict = Depends(get_current_user)):
 
 @app.delete("/api/alerts/{alert_id}")
 def delete_alert(alert_id: str):
-    from database import get_client
+    from backend.database import get_client
     client = get_client()
     client.table("price_alerts") \
         .delete() \
@@ -670,8 +670,8 @@ def delete_alert(alert_id: str):
 
 @app.get("/api/alerts/check")
 def check_alerts(current_user: dict = Depends(get_current_user)):
-    from database import get_client
-    from price_service import fetch_market_data
+    from backend.database import get_client
+    from backend.price_service import fetch_market_data
     client = get_client()
 
     alerts = client.table("price_alerts") \
@@ -716,8 +716,8 @@ def check_alerts(current_user: dict = Depends(get_current_user)):
 
 @app.post("/api/portfolio/buy")
 def portfolio_buy(trade: dict):
-    from database import get_client
-    from price_service import fetch_market_data
+    from backend.database import get_client
+    from backend.price_service import fetch_market_data
     try:
         client = get_client()
         data = fetch_market_data(trade["symbol"])
@@ -738,8 +738,8 @@ def portfolio_buy(trade: dict):
 
 @app.post("/api/portfolio/sell/{trade_id}")
 def portfolio_sell(trade_id: str, data: dict):
-    from database import get_client
-    from price_service import fetch_market_data
+    from backend.database import get_client
+    from backend.price_service import fetch_market_data
     try:
         client = get_client()
         trade_rows = client.table("virtual_portfolio") \
@@ -1084,3 +1084,8 @@ def protected_test_endpoint(current_user: dict = Depends(get_current_user)):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/api/health")
+def api_health():
+    return {"status": "ok", "message": "Backend API is running"}
