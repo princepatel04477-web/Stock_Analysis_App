@@ -15,7 +15,7 @@
     "@supabase/supabase-js": "^2.101.1",
     "axios": "^1.7.2",
     "lightweight-charts": "^4.2.0",
-    "next": "15.5.2",
+    "next": "15.5.9",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.12.7"
