@@ -10,6 +10,7 @@ import {
   fetchStocks,
   PortfolioResponse,
   sellPortfolioTrade,
+  Stock,
 } from "@/lib/api";
 
 const PIE_COLORS = ["#39FF14", "#00BFFF", "#a855f7", "#ec4899", "#f59e0b", "#ef4444", "#22d3ee", "#84cc16"];
@@ -34,7 +35,7 @@ function fmtINR(value: number): string {
 export default function PortfolioPage() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [stocks, setStocks] = useState<string[]>([]);
+  const [stocks, setStocks] = useState<Stock[]>([]);
   const [userId, setUserId] = useState("");
   const [portfolio, setPortfolio] = useState<PortfolioResponse>({
     trades: [],
@@ -55,7 +56,10 @@ export default function PortfolioPage() {
   const filteredStocks = useMemo(() => {
     if (!symbolInput.trim()) return [];
     const q = symbolInput.toUpperCase();
-    return stocks.filter((s) => s.toUpperCase().includes(q)).slice(0, 8);
+    return stocks.filter((s) => 
+      s.symbol.toUpperCase().includes(q) || 
+      s.name.toUpperCase().includes(q)
+    ).slice(0, 8);
   }, [stocks, symbolInput]);
 
   const pieData = useMemo(() => {
@@ -94,10 +98,12 @@ export default function PortfolioPage() {
     loadPortfolio(uid);
   }, []);
 
-  const onSelectStock = async (value: string) => {
-    setSymbolInput(value);
+  const onSelectStock = async (value: Stock | string) => {
+    const symbol = typeof value === 'string' 
+      ? value.split(" - ")[0].trim().toUpperCase()
+      : value.symbol.toUpperCase();
+    setSymbolInput(symbol);
     setDropdownOpen(false);
-    const symbol = value.split(" - ")[0].trim().toUpperCase();
     if (!symbol) return;
     try {
       const res = await fetchAnalysis(symbol);
@@ -211,11 +217,11 @@ export default function PortfolioPage() {
               <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, width: "100%", maxHeight: 230, overflowY: "auto", background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, zIndex: 30 }}>
                 {filteredStocks.map((s) => (
                   <button
-                    key={s}
+                    key={s.symbol}
                     onClick={() => onSelectStock(s)}
                     style={{ width: "100%", border: "none", background: "transparent", color: "#fff", textAlign: "left", padding: "10px 12px", cursor: "pointer" }}
                   >
-                    {s}
+                    {s.symbol} - {s.name}
                   </button>
                 ))}
               </div>

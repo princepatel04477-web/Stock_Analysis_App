@@ -9,6 +9,7 @@ import {
   fetchStocks,
   PriceAlert,
   removePriceAlert,
+  Stock,
 } from "@/lib/api";
 
 interface ToastItem {
@@ -53,7 +54,7 @@ function formatAgo(ts?: string | null): string {
 
 export default function AlertsPage() {
   const router = useRouter();
-  const [stocks, setStocks] = useState<string[]>([]);
+  const [stocks, setStocks] = useState<Stock[]>([]);
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [symbolInput, setSymbolInput] = useState("");
   const [condition, setCondition] = useState<"above" | "below">("above");
@@ -68,7 +69,10 @@ export default function AlertsPage() {
   const filteredStocks = useMemo(() => {
     if (!symbolInput.trim()) return [];
     const q = symbolInput.toUpperCase();
-    return stocks.filter((s) => s.toUpperCase().includes(q)).slice(0, 8);
+    return stocks.filter((s) => 
+      s.symbol.toUpperCase().includes(q) || 
+      s.name.toUpperCase().includes(q)
+    ).slice(0, 8);
   }, [stocks, symbolInput]);
 
   const activeAlerts = alerts.filter((a) => !a.is_triggered);
@@ -207,14 +211,14 @@ export default function AlertsPage() {
                 <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, width: "100%", maxHeight: 230, overflowY: "auto", background: "#111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, zIndex: 30 }}>
                   {filteredStocks.map((s) => (
                     <button
-                      key={s}
+                      key={s.symbol}
                       onClick={() => {
-                        setSymbolInput(s);
+                        setSymbolInput(s.symbol);
                         setDropdownOpen(false);
                       }}
                       style={{ width: "100%", border: "none", background: "transparent", color: "#fff", textAlign: "left", padding: "10px 12px", cursor: "pointer" }}
                     >
-                      {s}
+                      {s.symbol} - {s.name}
                     </button>
                   ))}
                 </div>
