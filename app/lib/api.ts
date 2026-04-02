@@ -1,7 +1,7 @@
 // lib/api.ts
 // All API calls to FastAPI backend
 
-const BASE_URL = "";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export interface MarketData {
   current_price: number;

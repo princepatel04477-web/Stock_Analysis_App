@@ -38,3 +38,6 @@ Desktop.ini
 tsconfig.tsbuildinfo
 package-lock.json
 
+
+.vercel
+.env*.local
