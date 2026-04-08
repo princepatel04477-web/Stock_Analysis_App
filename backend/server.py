@@ -1037,6 +1037,24 @@ def ensemble_prediction(symbol: str, llm_model: str = DEFAULT_MODEL, temperature
 
 
 # ---------------------------------------------------------------------------
+# ML Comparison endpoint
+# ---------------------------------------------------------------------------
+from backend.ml.train import train_and_compare
+
+@app.get("/api/ml/compare/{symbol}")
+def compare_ml_models(symbol: str):
+    """
+    Train and compare Logistic Regression vs Random Forest on the given symbol.
+    Returns metrics and base64 encoded comparison graphs.
+    """
+    try:
+        results = train_and_compare(symbol)
+        return results
+    except Exception as e:
+        logger.error(f"ML comparison failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ---------------------------------------------------------------------------
 # Authentication endpoints
 # ---------------------------------------------------------------------------
 
