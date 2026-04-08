@@ -814,7 +814,7 @@ function AnalysisSection({
             </div>
             <button
               onClick={onRunComparison}
-              disabled={comparisonLoading || !result}
+              disabled={comparisonLoading || !result || comparisonModels.length < 2}
               style={{
                 height: 40,
                 background: comparisonLoading ? "rgba(57,255,20,0.3)" : "#39FF14",
@@ -824,8 +824,8 @@ function AnalysisSection({
                 padding: "0 16px",
                 fontWeight: 700,
                 fontSize: 13,
-                cursor: comparisonLoading || !result ? "not-allowed" : "pointer",
-                opacity: comparisonLoading || !result ? 0.6 : 1,
+                cursor: comparisonLoading || !result || comparisonModels.length < 2 ? "not-allowed" : "pointer",
+                opacity: comparisonLoading || !result || comparisonModels.length < 2 ? 0.6 : 1,
               }}
             >
               {comparisonLoading ? "Running..." : "Run Comparison"}
@@ -834,6 +834,11 @@ function AnalysisSection({
           {!result && (
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 10 }}>
               Analyze a stock first, then run model comparison on that symbol.
+            </p>
+          )}
+          {comparisonModels.length < 2 && (
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 10 }}>
+              At least two Groq/OpenRouter text models are required to run comparison.
             </p>
           )}
           {comparisonError && (
@@ -1312,7 +1317,7 @@ export default function Home() {
         setComparisonModels(textModels);
         if (textModels.length > 0) {
           setCompareModelA(textModels[0].id);
-          setCompareModelB(textModels.length > 1 ? textModels[1].id : textModels[0].id);
+          setCompareModelB(textModels.length > 1 ? textModels[1].id : "");
         }
       })
       .catch(() => {});
