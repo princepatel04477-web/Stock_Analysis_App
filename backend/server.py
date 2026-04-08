@@ -37,6 +37,7 @@ from .multimodal_service import (
     DEFAULT_MODEL,
     DEFAULT_VISION_MODEL,
 )
+from .llm_comparison_service import run_llm_model_comparison
 from .auth_service import get_current_user, get_optional_user, verify_jwt_token, UserInfo
 
 app = FastAPI(title="NiftyPulse API")
@@ -632,6 +633,15 @@ class CreateAlertRequest(BaseModel):
     condition: Literal["above", "below"]
 
 
+class LLMComparisonRequest(BaseModel):
+    symbol: str
+    model_a: str
+    model_b: str
+    period: str = "6mo"
+    sample_size: int = Field(default=20, ge=8, le=60)
+    temperature: float = Field(default=0.2, ge=0.0, le=1.0)
+
+
 @app.post("/api/alerts/create")
 def create_alert(alert: CreateAlertRequest, current_user: dict = Depends(get_current_user)):
     from .database import get_client
@@ -911,6 +921,27 @@ def multimodal_analyze(request: dict):
         raise
     except Exception as e:
         logger.error(f"Multimodal analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/multimodal/compare-models")
+def compare_multimodal_models(request: LLMComparisonRequest):
+    """
+    Compare two selectable Groq/OpenRouter LLM models using historical price movement as ground truth.
+    """
+    try:
+        return run_llm_model_comparison(
+            symbol=request.symbol,
+            model_a=request.model_a,
+            model_b=request.model_b,
+            period=request.period,
+            sample_size=request.sample_size,
+            temperature=request.temperature,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"LLM model comparison failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

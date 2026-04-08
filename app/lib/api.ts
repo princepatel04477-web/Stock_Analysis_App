@@ -126,8 +126,46 @@ export interface ModelInfo {
   id: string;
   name: string;
   family: "llama" | "mistral" | "gemma" | "qwen";
-  provider: "ollama" | "groq";
+  provider: "ollama" | "groq" | "openrouter";
   vision: boolean;
+}
+
+export interface LLMComparisonRequest {
+  symbol: string;
+  model_a: string;
+  model_b: string;
+  period?: string;
+  sample_size?: number;
+  temperature?: number;
+}
+
+export interface LLMComparisonMetrics {
+  labels: number[];
+  confusion_matrix: number[][];
+  accuracy: number;
+  accuracy_percent: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+}
+
+export interface LLMComparisonResponse {
+  symbol: string;
+  ground_truth: string;
+  models_compared: string[];
+  evaluation_samples: number;
+  results: Record<string, LLMComparisonMetrics>;
+  metric_recommendations: {
+    accuracy: string;
+    precision: string;
+    recall: string;
+    f1_score: string;
+  };
+  suggested_model: string;
+  plots: {
+    confusion_matrices: Record<string, string>;
+    frequency_accuracy_chart: string;
+  };
 }
 
 export interface MultimodalModelsResponse {
@@ -578,6 +616,25 @@ export async function fetchPredictionWithModel(
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.detail || "Prediction failed");
+  }
+  return res.json();
+}
+
+/**
+ * Compare two LLM models (Groq/OpenRouter) against historical price movement ground truth
+ */
+export async function fetchLLMComparison(
+  request: LLMComparisonRequest
+): Promise<LLMComparisonResponse> {
+  const res = await fetch(`${BASE_URL}/api/multimodal/compare-models`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "LLM comparison failed");
   }
   return res.json();
 }

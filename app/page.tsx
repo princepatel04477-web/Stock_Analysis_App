@@ -6,10 +6,14 @@ import {
   fetchAnalysis,
   fetchPrediction,
   fetchPredictionWithModel,
+  fetchLLMComparison,
+  fetchMultimodalModels,
   fetchMarketSummary,
   AnalyzeResponse,
   Prediction,
   MarketSummaryData,
+  ModelInfo,
+  LLMComparisonResponse,
 } from "@/lib/api";
 import SearchBar from "@/components/SearchBar";
 import StockHeader from "@/components/StockHeader";
@@ -630,6 +634,15 @@ function AnalysisSection({
   prediction,
   selectedModel,
   setSelectedModel,
+  comparisonModels,
+  compareModelA,
+  setCompareModelA,
+  compareModelB,
+  setCompareModelB,
+  comparisonLoading,
+  comparisonError,
+  comparisonReport,
+  onRunComparison,
 }: {
   stocks: string[];
   onAnalyze: (s: string) => void;
@@ -639,6 +652,15 @@ function AnalysisSection({
   prediction: Prediction | null;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
+  comparisonModels: ModelInfo[];
+  compareModelA: string;
+  setCompareModelA: (model: string) => void;
+  compareModelB: string;
+  setCompareModelB: (model: string) => void;
+  comparisonLoading: boolean;
+  comparisonError: string | null;
+  comparisonReport: LLMComparisonResponse | null;
+  onRunComparison: () => void;
 }) {
   return (
     <section
@@ -718,6 +740,184 @@ function AnalysisSection({
               }}
             >
               ✨ Using {selectedModel.includes("vision") ? "vision-capable" : "advanced"} AI model via Groq Cloud for enhanced analysis
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            background: "#111",
+            border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 12,
+            padding: "20px 24px",
+            marginBottom: 24,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <span style={{ fontSize: 16 }}>📊</span>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#fff", margin: 0 }}>
+                Live LLM Model Comparison
+              </h3>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: 0, marginTop: 2 }}>
+                Compare two Groq/OpenRouter models with historical price-movement ground truth
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 12, alignItems: "end" }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 6 }}>Model A</label>
+              <select
+                value={compareModelA}
+                onChange={(e) => setCompareModelA(e.target.value)}
+                disabled={comparisonLoading}
+                style={{
+                  width: "100%",
+                  background: "#0d1117",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  color: "#fff",
+                  fontSize: 13,
+                }}
+              >
+                {comparisonModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.id} ({m.provider})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 6 }}>Model B</label>
+              <select
+                value={compareModelB}
+                onChange={(e) => setCompareModelB(e.target.value)}
+                disabled={comparisonLoading}
+                style={{
+                  width: "100%",
+                  background: "#0d1117",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  borderRadius: 8,
+                  padding: "10px 12px",
+                  color: "#fff",
+                  fontSize: 13,
+                }}
+              >
+                {comparisonModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.id} ({m.provider})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={onRunComparison}
+              disabled={comparisonLoading || !result}
+              style={{
+                height: 40,
+                background: comparisonLoading ? "rgba(57,255,20,0.3)" : "#39FF14",
+                color: "#000",
+                border: "none",
+                borderRadius: 8,
+                padding: "0 16px",
+                fontWeight: 700,
+                fontSize: 13,
+                cursor: comparisonLoading || !result ? "not-allowed" : "pointer",
+                opacity: comparisonLoading || !result ? 0.6 : 1,
+              }}
+            >
+              {comparisonLoading ? "Running..." : "Run Comparison"}
+            </button>
+          </div>
+          {!result && (
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 10 }}>
+              Analyze a stock first, then run model comparison on that symbol.
+            </p>
+          )}
+          {comparisonError && (
+            <div
+              style={{
+                marginTop: 12,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "rgba(248,81,73,0.1)",
+                border: "1px solid rgba(248,81,73,0.3)",
+                color: "#F85149",
+                fontSize: 13,
+              }}
+            >
+              ⚠️ {comparisonError}
+            </div>
+          )}
+          {comparisonReport && (
+            <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 10,
+                  padding: 14,
+                }}
+              >
+                <div style={{ fontSize: 14, color: "#fff", fontWeight: 700, marginBottom: 8 }}>
+                  Suggested Model: <span style={{ color: "#39FF14" }}>{comparisonReport.suggested_model}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(120px, 1fr))", gap: 10, fontSize: 12 }}>
+                  <div style={{ color: "rgba(255,255,255,0.7)" }}>Accuracy: <span style={{ color: "#fff" }}>{comparisonReport.metric_recommendations.accuracy}</span></div>
+                  <div style={{ color: "rgba(255,255,255,0.7)" }}>Precision: <span style={{ color: "#fff" }}>{comparisonReport.metric_recommendations.precision}</span></div>
+                  <div style={{ color: "rgba(255,255,255,0.7)" }}>Recall: <span style={{ color: "#fff" }}>{comparisonReport.metric_recommendations.recall}</span></div>
+                  <div style={{ color: "rgba(255,255,255,0.7)" }}>F1: <span style={{ color: "#fff" }}>{comparisonReport.metric_recommendations.f1_score}</span></div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {Object.entries(comparisonReport.results).map(([modelName, metrics]) => (
+                  <div
+                    key={modelName}
+                    style={{
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 10,
+                      padding: 14,
+                    }}
+                  >
+                    <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700 }}>{modelName}</h4>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(120px, 1fr))", gap: 6, fontSize: 12 }}>
+                      <div>Accuracy: <b>{metrics.accuracy_percent.toFixed(2)}%</b></div>
+                      <div>Precision: <b>{metrics.precision.toFixed(4)}</b></div>
+                      <div>Recall: <b>{metrics.recall.toFixed(4)}</b></div>
+                      <div>F1: <b>{metrics.f1_score.toFixed(4)}</b></div>
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                      <img
+                        src={`data:image/png;base64,${comparisonReport.plots.confusion_matrices[modelName]}`}
+                        alt={`${modelName} confusion matrix`}
+                        style={{ width: "100%", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 10,
+                  padding: 14,
+                }}
+              >
+                <h4 style={{ margin: "0 0 10px", fontSize: 14, fontWeight: 700 }}>
+                  Frequency & Accuracy Chart ({comparisonReport.evaluation_samples} samples)
+                </h4>
+                <img
+                  src={`data:image/png;base64,${comparisonReport.plots.frequency_accuracy_chart}`}
+                  alt="Frequency and accuracy chart"
+                  style={{ width: "100%", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)" }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -1092,17 +1292,38 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>("svm");
+  const [comparisonModels, setComparisonModels] = useState<ModelInfo[]>([]);
+  const [compareModelA, setCompareModelA] = useState<string>("");
+  const [compareModelB, setCompareModelB] = useState<string>("");
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [comparisonReport, setComparisonReport] = useState<LLMComparisonResponse | null>(null);
 
   useEffect(() => {
     fetchStocks()
       .then(setStocks)
       .catch(() => setError("Failed to load stock list. Is the backend running?"));
+
+    fetchMultimodalModels()
+      .then((data) => {
+        const textModels = data.models.filter(
+          (m) => !m.vision && (m.provider === "groq" || m.provider === "openrouter")
+        );
+        setComparisonModels(textModels);
+        if (textModels.length > 0) {
+          setCompareModelA(textModels[0].id);
+          setCompareModelB(textModels.length > 1 ? textModels[1].id : textModels[0].id);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleAnalyze = async (symbol: string) => {
     setLoading(true);
     setError(null);
     setPrediction(null);
+    setComparisonReport(null);
+    setComparisonError(null);
     try {
       const data = await fetchAnalysis(symbol);
       setResult(data);
@@ -1121,6 +1342,40 @@ export default function Home() {
       setError(`Failed to analyze ${symbol}: ${msg}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRunComparison = async () => {
+    if (!result?.symbol) {
+      setComparisonError("Please analyze a stock first.");
+      return;
+    }
+    if (!compareModelA || !compareModelB) {
+      setComparisonError("Please select both models.");
+      return;
+    }
+    if (compareModelA === compareModelB) {
+      setComparisonError("Please choose two different models.");
+      return;
+    }
+
+    setComparisonLoading(true);
+    setComparisonError(null);
+    try {
+      const report = await fetchLLMComparison({
+        symbol: result.symbol,
+        model_a: compareModelA,
+        model_b: compareModelB,
+        period: "6mo",
+        sample_size: 20,
+        temperature: 0.2,
+      });
+      setComparisonReport(report);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Comparison failed";
+      setComparisonError(msg);
+    } finally {
+      setComparisonLoading(false);
     }
   };
 
@@ -1224,6 +1479,15 @@ export default function Home() {
         prediction={prediction}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
+        comparisonModels={comparisonModels}
+        compareModelA={compareModelA}
+        setCompareModelA={setCompareModelA}
+        compareModelB={compareModelB}
+        setCompareModelB={setCompareModelB}
+        comparisonLoading={comparisonLoading}
+        comparisonError={comparisonError}
+        comparisonReport={comparisonReport}
+        onRunComparison={handleRunComparison}
       />
 
       <Footer />

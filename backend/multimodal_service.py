@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 class ModelProvider(str, Enum):
     OLLAMA = "ollama"
     GROQ = "groq"
+    OPENROUTER = "openrouter"
 
 
 class ModelFamily(str, Enum):
@@ -60,6 +61,11 @@ AVAILABLE_MODELS = {
     # Vision model via Groq
     "llama-3.2-11b-vision": {"provider": ModelProvider.GROQ, "name": "llama-3.2-11b-vision-preview", "family": ModelFamily.LLAMA, "vision": True},
     "llama-3.2-90b-vision": {"provider": ModelProvider.GROQ, "name": "llama-3.2-90b-vision-preview", "family": ModelFamily.LLAMA, "vision": True},
+
+    # OpenRouter text models
+    "or-llama-3.1-8b": {"provider": ModelProvider.OPENROUTER, "name": "meta-llama/llama-3.1-8b-instruct", "family": ModelFamily.LLAMA, "vision": False},
+    "or-qwen-2.5-72b": {"provider": ModelProvider.OPENROUTER, "name": "qwen/qwen-2.5-72b-instruct", "family": ModelFamily.QWEN, "vision": False},
+    "or-gemma-2-9b": {"provider": ModelProvider.OPENROUTER, "name": "google/gemma-2-9b-it", "family": ModelFamily.GEMMA, "vision": False},
 }
 
 DEFAULT_MODEL = "llama-3.1-8b"
@@ -166,6 +172,45 @@ class GroqProvider:
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Groq generation failed for {model}: {e}")
+            return None
+
+
+class OpenRouterProvider:
+    """Interface to OpenRouter API for multi-provider model inference."""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        self.client = None
+
+        if self.api_key:
+            try:
+                from openai import OpenAI
+                self.client = OpenAI(
+                    api_key=self.api_key,
+                    base_url="https://openrouter.ai/api/v1"
+                )
+            except ImportError:
+                logger.warning("openai package not installed for OpenRouter. Install with: pip install openai")
+
+    def generate_text(self, model: str, prompt: str, temperature: float = 0.7) -> Optional[str]:
+        """Generate text completion using OpenRouter."""
+        if not self.client:
+            return None
+
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=1024,
+                extra_headers={
+                    "HTTP-Referer": os.getenv("OPENROUTER_REFERER", "https://niftypulse.local"),
+                    "X-Title": os.getenv("OPENROUTER_APP_TITLE", "NiftyPulse"),
+                }
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"OpenRouter generation failed for {model}: {e}")
             return None
 
 
@@ -341,6 +386,9 @@ def analyze_stock_with_llm(
             response_text = provider.generate_text(model_name, prompt, temperature)
         elif provider_type == ModelProvider.GROQ:
             provider = GroqProvider()
+            response_text = provider.generate_text(model_name, prompt, temperature)
+        elif provider_type == ModelProvider.OPENROUTER:
+            provider = OpenRouterProvider()
             response_text = provider.generate_text(model_name, prompt, temperature)
         
         if not response_text:
