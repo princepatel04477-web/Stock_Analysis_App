@@ -6,6 +6,7 @@ A comprehensive Next.js + FastAPI stock analysis application with advanced ML pr
 
 - 📊 **Real-time Stock Analysis** - Market data, technical indicators, chart patterns
 - 🤖 **ML Predictions** - SVM-based + **LLM-powered** stock signals
+- 🧪 **Model Comparison Pipeline** - Logistic Regression vs Random Forest with full evaluation metrics + plots
 - 🔔 **Price Alerts** - Get notified when stocks hit target prices
 - 💼 **Portfolio Tracking** - Track trades with P&L calculations
 - 🎨 **Interactive Charts** - Candlestick charts with technical overlays
@@ -111,6 +112,7 @@ DEFAULT_VISION_MODEL=llama-3.2-11b-vision
 ### Core Stock Analysis
 - `GET /api/analyze/{symbol}` - Full stock analysis
 - `GET /api/predict/{symbol}` - ML prediction (enhanced with model selection)
+- `GET /api/ml/model-comparison/{symbol}` - Baseline vs advanced model benchmarking (confusion matrix, accuracy, precision, recall, F1, ROC, CV)
 - `GET /api/history/{symbol}` - Signal history
 
 ### Multimodal AI (New!)
@@ -168,6 +170,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ├── backend/               # FastAPI backend
 │   ├── server.py          # API routes + multimodal endpoints
 │   ├── ml_service.py      # Traditional SVM ML
+│   ├── model_comparison_service.py # Two-model training/evaluation/plots pipeline
 │   ├── multimodal_service.py  # LLM + vision models (NEW!)
 │   ├── price_service.py   # Market data + indicators
 │   └── database.py        # Supabase integration
@@ -178,8 +181,25 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 See [MULTIMODAL_GUIDE.md](./MULTIMODAL_GUIDE.md) for information on adding new models or extending AI capabilities.
 
+## Model Comparison Integration Guide
+
+Use the endpoint below to run a complete stock-direction model comparison pipeline:
+
+```http
+GET /api/ml/model-comparison/{symbol}?save_models=false
+```
+
+Response includes:
+- Two-model comparison (`Logistic Regression` baseline + `Random Forest` advanced)
+- Confusion matrix, accuracy, precision, recall, F1 score
+- Cross-validation summary
+- Base64-encoded plots for confusion matrices, metric comparison bar chart, and ROC curve
+
+Frontend integration point:
+- `app/lib/api.ts` → `fetchModelComparison(symbol, saveModels?)`
+- Returned type: `ModelComparisonResponse`
+
 ## License
 
 MIT License - see LICENSE file for details.
-
 

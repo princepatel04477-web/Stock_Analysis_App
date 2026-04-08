@@ -26,6 +26,7 @@ from .price_service import (
 from .utils_perplexity import fetch_latest_data_perplexity
 from .utils_groq import analyze_stock_groq
 from .ml_service import predict_signal
+from .model_comparison_service import run_model_comparison
 from .multimodal_service import (
     analyze_stock_with_llm,
     analyze_chart_with_vision,
@@ -597,6 +598,18 @@ def predict(symbol: str, model: str = "svm", temperature: float = 0.7):
         status_code=400, 
         detail=f"Unknown model: {model}. Use 'svm' or check /api/multimodal/models"
     )
+
+
+@app.get("/api/ml/model-comparison/{symbol}")
+def model_comparison(symbol: str, save_models: bool = False):
+    """
+    Compare baseline vs advanced ML classifiers for stock direction prediction.
+    """
+    try:
+        return run_model_comparison(symbol=symbol, save_trained_models=save_models)
+    except Exception as e:
+        logger.error(f"Model comparison failed for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/history/{symbol}")

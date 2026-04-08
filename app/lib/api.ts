@@ -87,6 +87,40 @@ export interface PredictResponse {
   prediction: Prediction;
 }
 
+export interface ModelMetrics {
+  confusion_matrix: number[][];
+  labels: number[];
+  accuracy: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+}
+
+export interface ModelComparisonResponse {
+  symbol: string;
+  model_rationale: {
+    baseline: string;
+    advanced: string;
+  };
+  dataset: {
+    rows: number;
+    features: number;
+    class_distribution: {
+      down: number;
+      up: number;
+    };
+  };
+  results: Record<string, ModelMetrics>;
+  cross_validation: Record<string, Omit<ModelMetrics, "confusion_matrix" | "labels">>;
+  best_model: string;
+  plots: {
+    confusion_matrices: Record<string, string>;
+    metrics_comparison: string;
+    roc_curve: string | null;
+  };
+  saved_models: Record<string, string>;
+}
+
 // Multimodal ML types
 export interface ModelInfo {
   id: string;
@@ -301,6 +335,21 @@ export async function fetchPrediction(symbol: string): Promise<PredictResponse> 
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.detail || "Prediction failed");
+  }
+  return res.json();
+}
+
+// Compare baseline vs advanced models for stock direction classification
+export async function fetchModelComparison(
+  symbol: string,
+  saveModels: boolean = false
+): Promise<ModelComparisonResponse> {
+  const res = await fetch(`${BASE_URL}/api/ml/model-comparison/${symbol}?save_models=${saveModels}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Model comparison failed");
   }
   return res.json();
 }
@@ -530,4 +579,3 @@ export async function fetchPredictionWithModel(
   }
   return res.json();
 }
-
