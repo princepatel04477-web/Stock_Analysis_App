@@ -28,6 +28,17 @@ from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_
 
 
 TARGET_ALIASES = ("target", "label", "signal", "buy_sell", "direction")
+BASELINE_MODEL_CONFIG = {
+    "max_iter": 2000,
+    "class_weight": "balanced",
+}
+ADVANCED_MODEL_CONFIG = {
+    "n_estimators": 300,
+    "max_depth": 8,
+    "random_state": 42,
+    "class_weight": "balanced_subsample",
+}
+DEFAULT_MODEL_SAVE_DIR = os.path.join(os.path.dirname(__file__), "saved_models")
 
 
 @dataclass
@@ -315,13 +326,8 @@ def run_model_comparison(
     prepared = prepare_data(symbol=symbol, dataset_path=dataset_path)
 
     models: dict[str, Any] = {
-        "Logistic Regression": LogisticRegression(max_iter=2000, class_weight="balanced"),
-        "Random Forest": RandomForestClassifier(
-            n_estimators=300,
-            max_depth=8,
-            random_state=42,
-            class_weight="balanced_subsample",
-        ),
+        "Logistic Regression": LogisticRegression(**BASELINE_MODEL_CONFIG),
+        "Random Forest": RandomForestClassifier(**ADVANCED_MODEL_CONFIG),
     }
 
     results: dict[str, dict[str, Any]] = {}
@@ -357,7 +363,7 @@ def run_model_comparison(
 
     saved_paths: dict[str, str] = {}
     if save_trained_models:
-        output_dir = model_dir or os.path.join(os.getcwd(), "backend", "saved_models")
+        output_dir = model_dir or DEFAULT_MODEL_SAVE_DIR
         saved_paths = save_models(fitted_models, output_dir)
 
     best_model = max(results.items(), key=lambda item: item[1]["f1_score"])[0]

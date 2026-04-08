@@ -344,7 +344,9 @@ export async function fetchModelComparison(
   symbol: string,
   saveModels: boolean = false
 ): Promise<ModelComparisonResponse> {
-  const res = await fetch(`${BASE_URL}/api/ml/model-comparison/${symbol}?save_models=${saveModels}`, {
+  const params = new URLSearchParams();
+  params.append("save_models", saveModels ? "true" : "false");
+  const res = await fetch(`${BASE_URL}/api/ml/model-comparison/${symbol}?${params.toString()}`, {
     cache: "no-store",
   });
   if (!res.ok) {
